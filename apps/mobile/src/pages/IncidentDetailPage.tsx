@@ -1,6 +1,11 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, QueryClient } from "@tanstack/react-query";
 import { incidentsApi } from "../lib/api";
 import { useNavigation } from "../lib/navigation";
+
+// Helper to get cached incident data
+function getCachedIncident(queryClient: QueryClient, incidentId: string) {
+  return queryClient.getQueryData<{ incident: Incident }>(["incident", incidentId]);
+}
 
 interface TimelineEntry {
   timestamp: number;
@@ -34,6 +39,12 @@ export default function IncidentDetailPage({ incidentId }: IncidentDetailPagePro
     queryKey: ["incident", incidentId],
     queryFn: () => incidentsApi.get(incidentId!),
     enabled: !!incidentId,
+    // Use cached data for instant display
+    initialData: () => incidentId ? getCachedIncident(queryClient, incidentId) : undefined,
+    // Keep showing cached data while refetching
+    placeholderData: (previousData) => previousData,
+    // Background refresh
+    refetchInterval: 5000,
   });
 
   const ackMutation = useMutation({

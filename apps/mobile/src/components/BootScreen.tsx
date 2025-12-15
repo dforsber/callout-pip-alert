@@ -39,8 +39,8 @@ export default function BootScreen({ onComplete }: BootScreenProps) {
     if (currentLine >= BOOT_LINES.length) {
       setTimeout(() => {
         setBootComplete(true);
-        setTimeout(onComplete, 800);
-      }, 500);
+        setTimeout(onComplete, 250);
+      }, 150);
       return;
     }
 
@@ -66,7 +66,7 @@ export default function BootScreen({ onComplete }: BootScreenProps) {
           return newText;
         });
         setCharIndex((prev) => prev + 1);
-      }, 20 + Math.random() * 30); // Slightly random typing speed
+      }, 7 + Math.random() * 10); // Slightly random typing speed
 
       return () => clearTimeout(timeout);
     } else {
@@ -74,7 +74,7 @@ export default function BootScreen({ onComplete }: BootScreenProps) {
       const timeout = setTimeout(() => {
         setCurrentLine((prev) => prev + 1);
         setCharIndex(0);
-      }, 100);
+      }, 33);
       return () => clearTimeout(timeout);
     }
   }, [currentLine, charIndex, onComplete]);
@@ -85,8 +85,9 @@ export default function BootScreen({ onComplete }: BootScreenProps) {
         <motion.div
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-          className="fixed inset-0 z-50 bg-zinc-900 flex flex-col justify-center p-6 crt-effect"
+          transition={{ duration: 0.15 }}
+          className="fixed top-0 left-0 right-0 bottom-0 z-50 bg-zinc-900 flex flex-col items-center justify-center p-6 crt-effect"
+          style={{ width: "100vw", height: "100dvh", minHeight: "100vh" }}
         >
           {/* Decorative border */}
           <div className="absolute inset-4 border-2 border-amber-500/30 rounded-lg pointer-events-none" />
@@ -108,29 +109,35 @@ export default function BootScreen({ onComplete }: BootScreenProps) {
     ████████    `}
           </div>
 
-          {/* Boot text */}
-          <div className="font-mono text-sm space-y-1 max-w-md mx-auto">
-            {displayedText.map((line, i) => (
-              <div
-                key={i}
-                className={`${
-                  line.includes("SYSTEM READY")
-                    ? "text-green-500 font-bold text-glow-green"
-                    : line.includes("RIFF-BOY")
-                    ? "text-amber-500 font-bold text-glow"
-                    : "text-amber-500/80"
-                }`}
-              >
-                {line}
-                {i === displayedText.length - 1 && showCursor && (
-                  <span className="text-amber-500">█</span>
-                )}
-              </div>
-            ))}
+          {/* Boot text - all lines pre-rendered for stable layout */}
+          <div className="font-mono text-sm space-y-1 w-full max-w-md text-left">
+            {BOOT_LINES.map((fullLine, i) => {
+              const typedText = displayedText[i] ?? "";
+              const isCurrentLine = i === currentLine;
+              const isTyped = i < currentLine || (i === currentLine && typedText.length > 0);
+
+              return (
+                <div
+                  key={i}
+                  className={`h-5 ${
+                    typedText.includes("SYSTEM READY")
+                      ? "text-green-500 font-bold text-glow-green"
+                      : typedText.includes("RIFF-BOY")
+                      ? "text-amber-500 font-bold text-glow"
+                      : "text-amber-500/80"
+                  }`}
+                >
+                  {typedText}
+                  {isCurrentLine && isTyped && showCursor && (
+                    <span className="text-amber-500">█</span>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           {/* Loading bar */}
-          <div className="mt-8 max-w-md mx-auto w-full">
+          <div className="mt-8 w-full max-w-md">
             <div className="h-2 bg-zinc-800 border border-amber-500/30 rounded overflow-hidden">
               <motion.div
                 className="h-full bg-amber-500"
@@ -145,7 +152,7 @@ export default function BootScreen({ onComplete }: BootScreenProps) {
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 0.4 }}
-            transition={{ delay: 1 }}
+            transition={{ delay: 0.3 }}
             className="text-amber-500/40 text-xs font-mono text-center mt-8"
           >
             TAP TO SKIP

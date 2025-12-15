@@ -46,8 +46,10 @@ class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryStat
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60, // 1 minute
+      staleTime: 1000 * 30, // 30 seconds - data considered fresh
+      gcTime: 1000 * 60 * 5, // 5 minutes - keep in cache
       retry: 2,
+      refetchOnWindowFocus: true,
     },
   },
 });

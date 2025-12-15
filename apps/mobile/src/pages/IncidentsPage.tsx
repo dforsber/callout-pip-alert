@@ -1,5 +1,5 @@
-import { useState, useMemo, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useMemo, useRef, useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { incidentsApi } from "../lib/api";
 import { useNavigation } from "../lib/navigation";
@@ -73,11 +73,27 @@ export default function IncidentsPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const { navigate } = useNavigation();
+  const queryClient = useQueryClient();
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["incidents", filter],
     queryFn: () => incidentsApi.list(filter !== "all" ? { state: filter } : undefined),
+    refetchInterval: 5000, // Refresh every 5 seconds
   });
+
+  // Pre-fetch all incident details when list loads
+  useEffect(() => {
+    if (data?.incidents) {
+      data.incidents.forEach((incident: Incident) => {
+        // Prefetch full incident details
+        queryClient.prefetchQuery({
+          queryKey: ["incident", incident.incident_id],
+          queryFn: () => incidentsApi.get(incident.incident_id),
+          staleTime: 1000 * 30, // 30 seconds
+        });
+      });
+    }
+  }, [data?.incidents, queryClient]);
 
   // Sort: severity first (critical > warning > info), then by time (newest first)
   const incidents = useMemo(() => {
