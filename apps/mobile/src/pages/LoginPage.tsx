@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 
 export default function LoginPage() {
@@ -12,7 +12,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const { signIn, signUp, confirmSignUp } = useAuth();
+  const { signIn, signUp, confirmSignUp, isConfigured } = useAuth();
   const navigate = useNavigate();
 
   async function handleSubmit(e: React.FormEvent) {
@@ -45,6 +45,20 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         <h1 className="text-2xl font-bold text-center mb-2">CW Alarms</h1>
         <p className="text-gray-500 text-center mb-8">CloudWatch Alarm Management</p>
+
+        {!isConfigured && (
+          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <p className="text-amber-800 text-sm mb-3">
+              No cloud backend configured. Please add your backend configuration to get started.
+            </p>
+            <Link
+              to="/settings"
+              className="block w-full py-2 bg-amber-600 text-white rounded-lg font-medium text-center"
+            >
+              Configure Backend
+            </Link>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {isSignUp && !isConfirming && (

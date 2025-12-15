@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import {
   CognitoUserPool,
   CognitoUser,
@@ -7,22 +7,41 @@ import {
   CognitoUserSession,
 } from "amazon-cognito-identity-js";
 import { LazyStore } from "@tauri-apps/plugin-store";
+import { getActiveBackend, initializeDefaultBackend } from "./backends";
 
-const CONFIG = {
-  userPoolId: import.meta.env.VITE_COGNITO_USER_POOL_ID || "",
-  clientId: import.meta.env.VITE_COGNITO_CLIENT_ID || "",
-  region: import.meta.env.VITE_COGNITO_REGION || "eu-west-1",
-};
+function getCognitoConfig() {
+  const backend = getActiveBackend();
+  if (backend) {
+    return {
+      userPoolId: backend.userPoolId,
+      clientId: backend.userPoolClientId,
+      region: backend.region,
+    };
+  }
+  // Fallback to env vars
+  return {
+    userPoolId: import.meta.env.VITE_USER_POOL_ID || import.meta.env.VITE_COGNITO_USER_POOL_ID || "",
+    clientId: import.meta.env.VITE_USER_POOL_CLIENT_ID || import.meta.env.VITE_COGNITO_CLIENT_ID || "",
+    region: import.meta.env.VITE_AWS_REGION || import.meta.env.VITE_COGNITO_REGION || "eu-west-1",
+  };
+}
 
-const userPool = new CognitoUserPool({
-  UserPoolId: CONFIG.userPoolId,
-  ClientId: CONFIG.clientId,
-});
+function createUserPool() {
+  const config = getCognitoConfig();
+  if (!config.userPoolId || !config.clientId) {
+    return null;
+  }
+  return new CognitoUserPool({
+    UserPoolId: config.userPoolId,
+    ClientId: config.clientId,
+  });
+}
 
 interface AuthContextType {
   user: CognitoUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isConfigured: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string) => Promise<void>;
   confirmSignUp: (email: string, code: string) => Promise<void>;
@@ -36,7 +55,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<CognitoUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Initialize default backend from env vars on first load
   useEffect(() => {
+    initializeDefaultBackend();
+  }, []);
+
+  const userPool = useMemo(() => createUserPool(), []);
+  const isConfigured = !!userPool;
+
+  useEffect(() => {
+    if (!userPool) {
+      setIsLoading(false);
+      return;
+    }
+
     // Check for existing session
     const currentUser = userPool.getCurrentUser();
     if (currentUser) {
@@ -51,9 +83,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } else {
       setIsLoading(false);
     }
-  }, []);
+  }, [userPool]);
 
   const signIn = useCallback(async (email: string, password: string) => {
+    if (!userPool) {
+      throw new Error("No backend configured. Please add a backend in Settings.");
+    }
+
     return new Promise<void>((resolve, reject) => {
       const cognitoUser = new CognitoUser({
         Username: email,
@@ -88,9 +124,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
       });
     });
-  }, []);
+  }, [userPool]);
 
   const signUp = useCallback(async (email: string, password: string, name: string) => {
+    if (!userPool) {
+      throw new Error("No backend configured. Please add a backend in Settings.");
+    }
+
     return new Promise<void>((resolve, reject) => {
       const attributeList = [
         new CognitoUserAttribute({ Name: "name", Value: name }),
@@ -109,9 +149,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       );
     });
-  }, []);
+  }, [userPool]);
 
   const confirmSignUp = useCallback(async (email: string, code: string) => {
+    if (!userPool) {
+      throw new Error("No backend configured. Please add a backend in Settings.");
+    }
+
     return new Promise<void>((resolve, reject) => {
       const cognitoUser = new CognitoUser({
         Username: email,
@@ -126,7 +170,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       });
     });
-  }, []);
+  }, [userPool]);
 
   const signOut = useCallback(async () => {
     if (user) {
@@ -166,6 +210,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         isAuthenticated: !!user,
         isLoading,
+        isConfigured,
         signIn,
         signUp,
         confirmSignUp,

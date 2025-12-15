@@ -38,6 +38,15 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      {/* Settings accessible without auth for initial backend setup */}
+      <Route
+        path="/settings"
+        element={
+          <Layout>
+            <SettingsPage />
+          </Layout>
+        }
+      />
       <Route
         path="/*"
         element={
@@ -49,7 +58,6 @@ function App() {
                 <Route path="/incidents/:id" element={<IncidentDetailPage />} />
                 <Route path="/schedule" element={<SchedulePage />} />
                 <Route path="/team" element={<TeamPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
               </Routes>
             </Layout>
           </ProtectedRoute>

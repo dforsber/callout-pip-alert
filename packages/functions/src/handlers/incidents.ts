@@ -39,6 +39,16 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
             ExpressionAttributeValues: { ":tid": teamId },
           })
         );
+      } else if (state) {
+        // Scan with state filter
+        result = await docClient.send(
+          new ScanCommand({
+            TableName: INCIDENTS_TABLE,
+            FilterExpression: "#state = :state",
+            ExpressionAttributeNames: { "#state": "state" },
+            ExpressionAttributeValues: { ":state": state },
+          })
+        );
       } else {
         // Scan all incidents (MVP: no team filtering)
         result = await docClient.send(

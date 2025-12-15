@@ -1,4 +1,9 @@
-const API_URL = import.meta.env.VITE_API_URL || "";
+import { getActiveBackend } from "./backends";
+
+function getApiUrl(): string {
+  const backend = getActiveBackend();
+  return backend?.apiUrl || import.meta.env.VITE_API_URL || "";
+}
 
 type GetTokenFn = () => Promise<string | null>;
 let getTokenFn: GetTokenFn | null = null;
@@ -9,8 +14,9 @@ export function setTokenGetter(fn: GetTokenFn) {
 
 async function fetchWithAuth(path: string, options: RequestInit = {}) {
   const token = getTokenFn ? await getTokenFn() : null;
+  const apiUrl = getApiUrl();
 
-  const response = await fetch(`${API_URL}${path}`, {
+  const response = await fetch(`${apiUrl}${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
