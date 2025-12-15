@@ -108,8 +108,11 @@ export default function IncidentDetailPage({ incidentId }: IncidentDetailPagePro
         <p className="text-sm text-amber-500/50 mt-1 break-all font-mono">{incident.alarm_arn}</p>
       </div>
 
-      {/* Status and actions */}
-      <div className="bg-zinc-800 rounded border-2 border-amber-500/30 p-4 mb-6">
+      {/* Status and actions - tap to go back */}
+      <div
+        onClick={goBack}
+        className="bg-zinc-800 rounded border-2 border-amber-500/30 p-4 mb-6 cursor-pointer active:bg-zinc-700"
+      >
         <div className="flex items-center justify-between mb-4">
           <span className="text-amber-500/70 font-mono">STATUS</span>
           <span className="font-bold text-amber-500 font-mono uppercase">{incident.state}</span>
@@ -124,6 +127,7 @@ export default function IncidentDetailPage({ incidentId }: IncidentDetailPagePro
             {new Date(incident.triggered_at).toLocaleString()}
           </span>
         </div>
+        <p className="text-xs text-amber-500/40 font-mono text-center mt-3">TAP TO GO BACK</p>
       </div>
 
       {/* Action button - only acknowledge, resolve happens automatically */}

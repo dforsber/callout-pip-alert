@@ -1,8 +1,10 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { incidentsApi } from "../lib/api";
 import { useNavigation } from "../lib/navigation";
+import { useAudio } from "../hooks/useAudio";
+import { useCriticalAlertDetection } from "../hooks/useCriticalAlertDetection";
 
 type IncidentState = "triggered" | "acked" | "resolved";
 type Severity = "critical" | "warning" | "info";
@@ -76,6 +78,7 @@ export default function IncidentsPage() {
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const { navigate } = useNavigation();
   const queryClient = useQueryClient();
+  const { playAlert, settings } = useAudio();
 
   const currentTab = FILTER_TABS.find(t => t.key === activeTab)!;
 
@@ -99,6 +102,18 @@ export default function IncidentsPage() {
       });
     }
   }, [data?.incidents, queryClient]);
+
+  // Handle new critical incident alert
+  const handleNewCritical = useCallback((incident: Incident) => {
+    playAlert("critical");
+    console.log("[ALERT] New critical incident:", incident.alarm_name);
+  }, [playAlert]);
+
+  // Detect new critical incidents and play alert sound
+  useCriticalAlertDetection(data?.incidents, {
+    onNewCritical: handleNewCritical,
+    enabled: settings.categories.alerts,
+  });
 
   // Filter by active tab's states, then sort by severity and time
   const incidents = useMemo(() => {

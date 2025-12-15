@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAudio } from "../hooks/useAudio";
 
 interface BootScreenProps {
   onComplete: () => void;
@@ -26,6 +27,10 @@ export default function BootScreen({ onComplete }: BootScreenProps) {
   const [showCursor, setShowCursor] = useState(true);
   const [bootComplete, setBootComplete] = useState(false);
 
+  const { initialize, playBootSound, isInitialized } = useAudio();
+  const lastBeepCharRef = useRef(0);
+  const lastLineRef = useRef(-1);
+
   // Cursor blink effect
   useEffect(() => {
     const cursorInterval = setInterval(() => {
@@ -34,9 +39,31 @@ export default function BootScreen({ onComplete }: BootScreenProps) {
     return () => clearInterval(cursorInterval);
   }, []);
 
+  // Play terminal beeps during typing (every ~5 characters)
+  useEffect(() => {
+    if (!isInitialized) return;
+    if (charIndex > 0 && charIndex - lastBeepCharRef.current >= 5) {
+      playBootSound("beep");
+      lastBeepCharRef.current = charIndex;
+    }
+  }, [charIndex, isInitialized, playBootSound]);
+
+  // Play line complete sound when a line finishes
+  useEffect(() => {
+    if (!isInitialized) return;
+    if (currentLine > lastLineRef.current && currentLine > 0 && currentLine < BOOT_LINES.length) {
+      playBootSound("line_complete");
+      lastLineRef.current = currentLine;
+    }
+  }, [currentLine, isInitialized, playBootSound]);
+
   // Typewriter effect
   useEffect(() => {
     if (currentLine >= BOOT_LINES.length) {
+      // Play system ready fanfare
+      if (isInitialized) {
+        playBootSound("system_ready");
+      }
       setTimeout(() => {
         setBootComplete(true);
         setTimeout(onComplete, 250);
@@ -110,7 +137,7 @@ export default function BootScreen({ onComplete }: BootScreenProps) {
 
           {/* Boot text - all lines pre-rendered for stable layout */}
           <div className="font-mono text-sm w-full max-w-md text-left pl-8">
-            {BOOT_LINES.map((fullLine, i) => {
+            {BOOT_LINES.map((_, i) => {
               const typedText = displayedText[i] ?? "";
               const isCurrentLine = i === currentLine;
               const isTyped = i < currentLine || (i === currentLine && typedText.length > 0);
@@ -156,10 +183,14 @@ export default function BootScreen({ onComplete }: BootScreenProps) {
             </motion.p>
           </div>
 
-          {/* Tap to skip overlay */}
+          {/* Tap to skip overlay - initializes audio on user gesture */}
           <div
             className="absolute inset-0"
-            onClick={() => {
+            onClick={async () => {
+              // Initialize audio on first tap (required for mobile)
+              if (!isInitialized) {
+                await initialize();
+              }
               setBootComplete(true);
               onComplete();
             }}

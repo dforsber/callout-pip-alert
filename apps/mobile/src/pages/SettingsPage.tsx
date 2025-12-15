@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../lib/auth";
 import { useNavigation } from "../lib/navigation";
+import { useAudio } from "../hooks/useAudio";
 import {
   CloudBackend,
   getBackends,
@@ -89,6 +90,9 @@ export default function SettingsPage() {
   const [biometricEnabled, setBiometricEnabledState] = useState(false);
   const [biometricType, setBiometricType] = useState("Biometrics");
   const [hasCredentials, setHasCredentials] = useState(false);
+
+  // Audio settings
+  const { settings: audioSettings, updateSettings, toggleCategory, setMasterVolume, playUISound } = useAudio();
 
   useEffect(() => {
     setBackends(getBackends());
@@ -186,7 +190,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-full bg-zinc-900 p-4">
+    <div className="min-h-full bg-zinc-900 p-4 overflow-auto">
       <h1 className="text-xl font-bold text-amber-500 font-mono tracking-wider mb-4">CONFIG</h1>
 
       {/* Cloud Backends Section */}
@@ -353,6 +357,135 @@ export default function SettingsPage() {
           )}
         </div>
       )}
+
+      {/* Audio Settings */}
+      <div className="bg-zinc-800 rounded border-2 border-amber-500/30 p-4 mb-4">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-sm font-bold text-amber-500 font-mono">{">"} AUDIO</h2>
+            <p className="text-xs text-amber-500/60 mt-0.5 font-mono">
+              {audioSettings.enabled ? "PIP-BOY AUDIO ENABLED" : "AUDIO DISABLED"}
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              updateSettings({ enabled: !audioSettings.enabled });
+              playUISound(audioSettings.enabled ? "toggle_off" : "toggle_on");
+            }}
+            className={`relative w-12 h-7 rounded-full transition-colors border-2 ${
+              audioSettings.enabled ? "bg-green-500/20 border-green-500" : "bg-zinc-900 border-amber-500/30"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform ${
+                audioSettings.enabled ? "translate-x-5 bg-green-500" : "bg-amber-500/50"
+              }`}
+            />
+          </button>
+        </div>
+
+        {audioSettings.enabled && (
+          <>
+            {/* Master Volume */}
+            <div className="mb-4">
+              <label className="block text-xs font-bold text-amber-500/70 font-mono mb-2">
+                {">"} MASTER VOLUME: {Math.round(audioSettings.masterVolume * 100)}%
+              </label>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={Math.round(audioSettings.masterVolume * 100)}
+                onChange={(e) => setMasterVolume(Number(e.target.value) / 100)}
+                className="w-full h-2 bg-zinc-900 rounded-lg appearance-none cursor-pointer accent-amber-500"
+              />
+            </div>
+
+            {/* Category Toggles */}
+            <div className="space-y-3">
+              {/* UI Sounds */}
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-amber-500/80 font-mono">UI SOUNDS</span>
+                <button
+                  onClick={() => {
+                    toggleCategory("ui");
+                    playUISound(audioSettings.categories.ui ? "toggle_off" : "toggle_on");
+                  }}
+                  className={`relative w-10 h-6 rounded-full transition-colors border ${
+                    audioSettings.categories.ui ? "bg-green-500/20 border-green-500/50" : "bg-zinc-900 border-amber-500/20"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full transition-transform ${
+                      audioSettings.categories.ui ? "translate-x-4 bg-green-500" : "bg-amber-500/40"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Boot Sounds */}
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-amber-500/80 font-mono">BOOT SEQUENCE</span>
+                <button
+                  onClick={() => {
+                    toggleCategory("boot");
+                    playUISound(audioSettings.categories.boot ? "toggle_off" : "toggle_on");
+                  }}
+                  className={`relative w-10 h-6 rounded-full transition-colors border ${
+                    audioSettings.categories.boot ? "bg-green-500/20 border-green-500/50" : "bg-zinc-900 border-amber-500/20"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full transition-transform ${
+                      audioSettings.categories.boot ? "translate-x-4 bg-green-500" : "bg-amber-500/40"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Alert Sounds */}
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-amber-500/80 font-mono">ALERTS</span>
+                <button
+                  onClick={() => {
+                    toggleCategory("alerts");
+                    playUISound(audioSettings.categories.alerts ? "toggle_off" : "toggle_on");
+                  }}
+                  className={`relative w-10 h-6 rounded-full transition-colors border ${
+                    audioSettings.categories.alerts ? "bg-red-500/20 border-red-500/50" : "bg-zinc-900 border-amber-500/20"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full transition-transform ${
+                      audioSettings.categories.alerts ? "translate-x-4 bg-red-500" : "bg-amber-500/40"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Ambient Sounds */}
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-amber-500/80 font-mono">AMBIENT</span>
+                <button
+                  onClick={() => {
+                    toggleCategory("ambient");
+                    playUISound(audioSettings.categories.ambient ? "toggle_off" : "toggle_on");
+                  }}
+                  className={`relative w-10 h-6 rounded-full transition-colors border ${
+                    audioSettings.categories.ambient ? "bg-green-500/20 border-green-500/50" : "bg-zinc-900 border-amber-500/20"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full transition-transform ${
+                      audioSettings.categories.ambient ? "translate-x-4 bg-green-500" : "bg-amber-500/40"
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
 
       {/* User info */}
       {isAuthenticated && (

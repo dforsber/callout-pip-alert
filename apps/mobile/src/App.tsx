@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "./lib/auth";
 import { setTokenGetter } from "./lib/api";
 import { NavigationProvider, useNavigation, Page } from "./lib/navigation";
+import { AudioProvider } from "./hooks/useAudio";
 import Layout from "./components/Layout";
 import BootScreen from "./components/BootScreen";
 import LoginPage from "./pages/LoginPage";
@@ -11,7 +12,7 @@ import SchedulePage from "./pages/SchedulePage";
 import TeamPage from "./pages/TeamPage";
 import SettingsPage from "./pages/SettingsPage";
 
-function PageContainer({ page, isVisible, children }: { page: Page; isVisible: boolean; children: React.ReactNode }) {
+function PageContainer({ isVisible, children }: { page: Page; isVisible: boolean; children: React.ReactNode }) {
   return (
     <div
       className={`absolute inset-0 ${isVisible ? "z-10" : "z-0 pointer-events-none"}`}
@@ -94,14 +95,16 @@ function App() {
     setTokenGetter(getToken);
   }, [getToken]);
 
-  if (!bootComplete) {
-    return <BootScreen onComplete={() => setBootComplete(true)} />;
-  }
-
   return (
-    <NavigationProvider>
-      <AppContent />
-    </NavigationProvider>
+    <AudioProvider>
+      {!bootComplete ? (
+        <BootScreen onComplete={() => setBootComplete(true)} />
+      ) : (
+        <NavigationProvider>
+          <AppContent />
+        </NavigationProvider>
+      )}
+    </AudioProvider>
   );
 }
 

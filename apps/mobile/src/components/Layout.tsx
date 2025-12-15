@@ -1,4 +1,5 @@
 import { useNavigation, Page } from "../lib/navigation";
+import { useAudio } from "../hooks/useAudio";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -27,11 +28,23 @@ interface TabLinkProps {
 
 function TabLink({ page, icon, label }: TabLinkProps) {
   const { state, navigate } = useNavigation();
+  const { playUISound, initialize, isInitialized } = useAudio();
   const isActive = state.currentPage === page || (page === "incidents" && state.currentPage === "incident-detail");
+
+  const handleClick = async () => {
+    // Auto-initialize audio on first interaction
+    if (!isInitialized) {
+      await initialize();
+    }
+    if (state.currentPage !== page) {
+      playUISound("tab");
+    }
+    navigate(page);
+  };
 
   return (
     <button
-      onClick={() => navigate(page)}
+      onClick={handleClick}
       className={`flex-1 flex flex-col items-center py-2 text-sm font-mono transition-all ${
         isActive ? "text-amber-500 text-glow" : "text-amber-500/40"
       }`}
