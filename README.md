@@ -1,8 +1,14 @@
 # CALLOUT RIFF-BOY
 
 ```
+██████╗ ██╗███████╗███████╗    ██████╗  ██████╗ ██╗   ██╗
+██╔══██╗██║██╔════╝██╔════╝    ██╔══██╗██╔═══██╗╚██╗ ██╔╝
+██████╔╝██║█████╗  █████╗█████╗██████╔╝██║   ██║ ╚████╔╝
+██╔══██╗██║██╔══╝  ██╔══╝╚════╝██╔══██╗██║   ██║  ╚██╔╝
+██║  ██║██║██║     ██║         ██████╔╝╚██████╔╝   ██║
+╚═╝  ╚═╝╚═╝╚═╝     ╚═╝         ╚═════╝  ╚═════╝    ╚═╝
+
 > VAULT-TEC APPROVED INCIDENT RESPONSE SYSTEM
-> INITIALIZING...
 ```
 
 Mobile incident management app for AWS CloudWatch alarms. Like PagerDuty/OpsGenie, but with Fallout Pip-Boy aesthetics.

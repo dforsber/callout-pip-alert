@@ -98,15 +98,14 @@ export default function BootScreen({ onComplete }: BootScreenProps) {
           <div className="absolute bottom-4 left-4 w-8 h-8 border-b-2 border-l-2 border-amber-500 rounded-bl-lg" />
           <div className="absolute bottom-4 right-4 w-8 h-8 border-b-2 border-r-2 border-amber-500 rounded-br-lg" />
 
-          {/* Vault Boy ASCII Art */}
-          <div className="text-amber-500 font-mono text-center mb-8 text-xs leading-tight whitespace-pre opacity-60">
-{`    ████████
-   ██      ██
-  ██  ●  ●  ██
-  ██    ▼   ██
-  ██  \\__/  ██
-   ██      ██
-    ████████    `}
+          {/* RIFF-BOY Logo */}
+          <div className="text-amber-500 font-mono text-center mb-6 leading-none whitespace-pre text-glow" style={{ fontSize: '8px', letterSpacing: '1px' }}>
+{`██████╗ ██╗███████╗███████╗    ██████╗  ██████╗ ██╗   ██╗
+██╔══██╗██║██╔════╝██╔════╝    ██╔══██╗██╔═══██╗╚██╗ ██╔╝
+██████╔╝██║█████╗  █████╗█████╗██████╔╝██║   ██║ ╚████╔╝
+██╔══██╗██║██╔══╝  ██╔══╝╚════╝██╔══██╗██║   ██║  ╚██╔╝
+██║  ██║██║██║     ██║         ██████╔╝╚██████╔╝   ██║
+╚═╝  ╚═╝╚═╝╚═╝     ╚═╝         ╚═════╝  ╚═════╝    ╚═╝`}
           </div>
 
           {/* Boot text - all lines pre-rendered for stable layout */}
