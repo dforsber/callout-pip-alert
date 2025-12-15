@@ -5,9 +5,19 @@ import {
   CognitoUserAttribute,
   AuthenticationDetails,
   CognitoUserSession,
+  CognitoRefreshToken,
 } from "amazon-cognito-identity-js";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import { getActiveBackend, initializeDefaultBackend } from "./backends";
+import {
+  storeCredentials,
+  clearStoredCredentials,
+  getStoredCredentials,
+  isBiometricEnabled,
+  authenticateWithBiometric,
+  checkBiometricAvailability,
+  getBiometryTypeName,
+} from "./biometric";
 
 function getCognitoConfig() {
   const backend = getActiveBackend();
@@ -42,7 +52,10 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   isConfigured: boolean;
+  canUseBiometric: boolean;
+  biometricType: string;
   signIn: (email: string, password: string) => Promise<void>;
+  signInWithBiometric: () => Promise<boolean>;
   signUp: (email: string, password: string, name: string) => Promise<void>;
   confirmSignUp: (email: string, code: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -54,6 +67,8 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<CognitoUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [canUseBiometric, setCanUseBiometric] = useState(false);
+  const [biometricType, setBiometricType] = useState("Biometrics");
 
   // Initialize default backend from env vars on first load
   useEffect(() => {
@@ -62,6 +77,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const userPool = useMemo(() => createUserPool(), []);
   const isConfigured = !!userPool;
+
+  // Check biometric availability
+  useEffect(() => {
+    async function checkBiometric() {
+      const status = await checkBiometricAvailability();
+      const enabled = await isBiometricEnabled();
+      const hasCredentials = await getStoredCredentials();
+
+      setCanUseBiometric(status.available && enabled && hasCredentials !== null);
+      setBiometricType(getBiometryTypeName(status.biometryType));
+    }
+    checkBiometric();
+  }, []);
 
   useEffect(() => {
     if (!userPool) {
@@ -111,6 +139,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             await store.set("accessToken", session.getAccessToken().getJwtToken());
             await store.set("refreshToken", session.getRefreshToken().getToken());
             await store.save();
+
+            // Store credentials for biometric login
+            await storeCredentials(email, session.getRefreshToken().getToken());
           } catch (e) {
             console.warn("Failed to store tokens:", e);
           }
@@ -122,6 +153,68 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         newPasswordRequired: () => {
           reject(new Error("New password required"));
         },
+      });
+    });
+  }, [userPool]);
+
+  const signInWithBiometric = useCallback(async (): Promise<boolean> => {
+    if (!userPool) {
+      return false;
+    }
+
+    // Check if biometric is enabled and we have stored credentials
+    const enabled = await isBiometricEnabled();
+    if (!enabled) {
+      return false;
+    }
+
+    const credentials = await getStoredCredentials();
+    if (!credentials) {
+      return false;
+    }
+
+    // Authenticate with biometric
+    const authenticated = await authenticateWithBiometric("Sign in to Callout");
+    if (!authenticated) {
+      return false;
+    }
+
+    // Use refresh token to get new session
+    return new Promise<boolean>((resolve) => {
+      const cognitoUser = new CognitoUser({
+        Username: credentials.email,
+        Pool: userPool,
+      });
+
+      const refreshToken = new CognitoRefreshToken({
+        RefreshToken: credentials.refreshToken,
+      });
+
+      cognitoUser.refreshSession(refreshToken, async (err, session) => {
+        if (err || !session) {
+          // Refresh token expired or invalid, clear stored credentials
+          await clearStoredCredentials();
+          resolve(false);
+          return;
+        }
+
+        setUser(cognitoUser);
+
+        // Update stored tokens
+        try {
+          const store = new LazyStore("auth.json");
+          await store.set("idToken", session.getIdToken().getJwtToken());
+          await store.set("accessToken", session.getAccessToken().getJwtToken());
+          await store.set("refreshToken", session.getRefreshToken().getToken());
+          await store.save();
+
+          // Update stored refresh token
+          await storeCredentials(credentials.email, session.getRefreshToken().getToken());
+        } catch (e) {
+          console.warn("Failed to store tokens:", e);
+        }
+
+        resolve(true);
       });
     });
   }, [userPool]);
@@ -181,6 +274,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const store = new LazyStore("auth.json");
       await store.clear();
       await store.save();
+      // Note: We don't clear biometric credentials on sign out
+      // so user can still use biometric to sign back in
     } catch (e) {
       console.warn("Failed to clear tokens:", e);
     }
@@ -211,7 +306,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isAuthenticated: !!user,
         isLoading,
         isConfigured,
+        canUseBiometric,
+        biometricType,
         signIn,
+        signInWithBiometric,
         signUp,
         confirmSignUp,
         signOut,

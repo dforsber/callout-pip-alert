@@ -25,29 +25,29 @@ const severityOrder: Record<Severity, number> = {
 
 const severityConfig: Record<Severity, { dot: string; text: string; bg: string; border: string }> = {
   critical: {
-    dot: "bg-red-500",
-    text: "text-red-700",
-    bg: "bg-red-50",
+    dot: "bg-red-500 animate-pulse",
+    text: "text-red-500",
+    bg: "bg-red-500/10",
     border: "border-l-red-500",
   },
   warning: {
     dot: "bg-amber-500",
-    text: "text-amber-700",
-    bg: "bg-amber-50",
+    text: "text-amber-500",
+    bg: "bg-amber-500/10",
     border: "border-l-amber-500",
   },
   info: {
-    dot: "bg-blue-500",
-    text: "text-blue-700",
-    bg: "bg-blue-50",
-    border: "border-l-blue-500",
+    dot: "bg-green-500",
+    text: "text-green-500",
+    bg: "bg-green-500/10",
+    border: "border-l-green-500",
   },
 };
 
 const stateConfig: Record<IncidentState, { label: string; bg: string }> = {
-  triggered: { label: "Triggered", bg: "bg-red-100 text-red-800" },
-  acked: { label: "Acknowledged", bg: "bg-amber-100 text-amber-800" },
-  resolved: { label: "Resolved", bg: "bg-green-100 text-green-800" },
+  triggered: { label: "TRIGGERED", bg: "bg-red-500/20 text-red-500 border border-red-500/50" },
+  acked: { label: "ACKNOWLEDGED", bg: "bg-amber-500/20 text-amber-500 border border-amber-500/50" },
+  resolved: { label: "RESOLVED", bg: "bg-green-500/20 text-green-500 border border-green-500/50" },
 };
 
 function relativeTime(timestamp: number): string {
@@ -145,7 +145,7 @@ export default function IncidentsPage() {
   return (
     <div
       ref={containerRef}
-      className="min-h-full bg-gray-100 overflow-auto"
+      className="min-h-full bg-zinc-900 overflow-auto"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -156,19 +156,19 @@ export default function IncidentsPage() {
         style={{ height: pullDistance > 0 ? pullDistance : 0 }}
       >
         <div className={`${isRefreshing ? 'animate-spin' : ''}`}>
-          <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-6 h-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
         </div>
       </div>
 
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3 sticky top-0 z-10">
+      <div className="bg-zinc-800 border-b-2 border-amber-500/30 px-4 py-3 sticky top-0 z-10">
         <div className="flex items-center justify-between mb-3">
-          <h1 className="text-xl font-semibold text-gray-900">Incidents</h1>
+          <h1 className="text-xl font-bold text-amber-500 font-mono tracking-wider">ALERTS</h1>
           {triggeredCount > 0 && (
-            <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-              {triggeredCount} active
+            <span className="bg-red-500/20 text-red-500 text-xs font-bold font-mono px-2 py-1 rounded border border-red-500/50">
+              {triggeredCount} ACTIVE
             </span>
           )}
         </div>
@@ -179,13 +179,13 @@ export default function IncidentsPage() {
             <button
               key={state}
               onClick={() => setFilter(state)}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+              className={`px-3 py-1.5 rounded text-xs font-bold font-mono whitespace-nowrap transition-colors border ${
                 filter === state
-                  ? "bg-gray-900 text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  ? "bg-amber-500 text-zinc-900 border-amber-500"
+                  : "bg-zinc-900 text-amber-500/70 border-amber-500/30 hover:border-amber-500/50"
               }`}
             >
-              {state === "all" ? "All" : stateConfig[state].label}
+              {state === "all" ? "ALL" : stateConfig[state].label}
             </button>
           ))}
         </div>
@@ -193,7 +193,7 @@ export default function IncidentsPage() {
 
       {/* Loading */}
       {isLoading && (
-        <div className="text-center text-gray-500 py-8">Loading...</div>
+        <div className="text-center text-amber-500 font-mono py-8">&gt; LOADING INCIDENTS...</div>
       )}
 
       {/* Incident list */}
@@ -211,15 +211,15 @@ export default function IncidentsPage() {
 
       {incidents.length === 0 && !isLoading && (
         <div className="text-center py-12">
-          <div className="text-gray-400 text-4xl mb-2">✓</div>
-          <p className="text-gray-500">No incidents</p>
+          <div className="text-green-500 text-4xl mb-2 font-mono">[OK]</div>
+          <p className="text-amber-500/60 font-mono">NO ACTIVE INCIDENTS</p>
         </div>
       )}
 
       {/* Swipe hint for tab navigation */}
       {incidents.length > 0 && (
-        <p className="text-xs text-gray-400 text-center py-4">
-          ← Swipe to change filter →
+        <p className="text-xs text-amber-500/40 text-center py-4 font-mono">
+          &lt; SWIPE TO CHANGE FILTER &gt;
         </p>
       )}
     </div>
@@ -245,34 +245,34 @@ function IncidentCard({
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.15, layout: { duration: 0.15 } }}
       onClick={onClick}
-      className={`bg-white rounded-lg shadow-sm border-l-4 ${config.border} cursor-pointer active:bg-gray-50 overflow-hidden`}
+      className={`bg-zinc-800 rounded border-l-4 ${config.border} cursor-pointer active:bg-zinc-700 overflow-hidden border border-amber-500/20`}
     >
       <div className="p-3">
         {/* Top row: severity indicator + time */}
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
             <div className={`w-2 h-2 rounded-full ${config.dot}`} />
-            <span className={`text-xs font-medium uppercase tracking-wide ${config.text}`}>
+            <span className={`text-xs font-bold font-mono uppercase tracking-wider ${config.text}`}>
               {incident.severity}
             </span>
           </div>
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-amber-500/50 font-mono">
             {relativeTime(incident.triggered_at)}
           </span>
         </div>
 
         {/* Alarm name */}
-        <h3 className="font-medium text-gray-900 mb-2 leading-snug">
+        <h3 className="font-medium text-amber-500 mb-2 leading-snug font-mono">
           {incident.alarm_name}
         </h3>
 
         {/* Bottom row: state badge */}
         <div className="flex items-center justify-between">
-          <span className={`text-xs font-medium px-2 py-0.5 rounded ${state.bg}`}>
+          <span className={`text-xs font-bold font-mono px-2 py-0.5 rounded ${state.bg}`}>
             {state.label}
           </span>
           {incident.aws_account_id && (
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-amber-500/40 font-mono">
               {incident.aws_account_id}
             </span>
           )}

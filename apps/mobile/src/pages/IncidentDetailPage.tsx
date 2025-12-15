@@ -53,56 +53,56 @@ export default function IncidentDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="p-4 text-center text-gray-500">Loading...</div>
+      <div className="min-h-full bg-zinc-900 p-4 text-center text-amber-500 font-mono">&gt; LOADING...</div>
     );
   }
 
   if (!incident) {
     return (
-      <div className="p-4 text-center text-gray-500">Incident not found</div>
+      <div className="min-h-full bg-zinc-900 p-4 text-center text-red-500 font-mono">[ERROR] INCIDENT NOT FOUND</div>
     );
   }
 
   const severityColors = {
-    critical: "bg-red-100 text-red-800",
-    warning: "bg-yellow-100 text-yellow-800",
-    info: "bg-blue-100 text-blue-800",
+    critical: "bg-red-500/20 text-red-500 border border-red-500/50",
+    warning: "bg-amber-500/20 text-amber-500 border border-amber-500/50",
+    info: "bg-green-500/20 text-green-500 border border-green-500/50",
   };
 
   return (
-    <div className="p-4">
+    <div className="min-h-full bg-zinc-900 p-4">
       {/* Back button */}
       <button
         onClick={() => navigate(-1)}
-        className="text-blue-600 mb-4 flex items-center gap-1"
+        className="text-amber-500 font-mono font-bold mb-4 flex items-center gap-1"
       >
-        ← Back
+        &lt; BACK
       </button>
 
       {/* Header */}
       <div className="mb-6">
         <span
-          className={`inline-block px-2 py-1 rounded text-xs font-medium mb-2 ${severityColors[incident.severity]}`}
+          className={`inline-block px-2 py-1 rounded text-xs font-bold font-mono mb-2 ${severityColors[incident.severity]}`}
         >
           {incident.severity.toUpperCase()}
         </span>
-        <h1 className="text-xl font-bold">{incident.alarm_name}</h1>
-        <p className="text-sm text-gray-500 mt-1 break-all">{incident.alarm_arn}</p>
+        <h1 className="text-xl font-bold text-amber-500 font-mono">{incident.alarm_name}</h1>
+        <p className="text-sm text-amber-500/50 mt-1 break-all font-mono">{incident.alarm_arn}</p>
       </div>
 
       {/* Status and actions */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
+      <div className="bg-zinc-800 rounded border-2 border-amber-500/30 p-4 mb-6">
         <div className="flex items-center justify-between mb-4">
-          <span className="text-gray-600">Status</span>
-          <span className="font-medium capitalize">{incident.state}</span>
+          <span className="text-amber-500/70 font-mono">STATUS</span>
+          <span className="font-bold text-amber-500 font-mono uppercase">{incident.state}</span>
         </div>
         <div className="flex items-center justify-between mb-4">
-          <span className="text-gray-600">Assigned to</span>
-          <span className="font-medium">{incident.assigned_to || "—"}</span>
+          <span className="text-amber-500/70 font-mono">ASSIGNED</span>
+          <span className="font-bold text-amber-500 font-mono">{incident.assigned_to || "—"}</span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-gray-600">Triggered</span>
-          <span className="font-medium">
+          <span className="text-amber-500/70 font-mono">TRIGGERED</span>
+          <span className="font-bold text-amber-500 font-mono">
             {new Date(incident.triggered_at).toLocaleString()}
           </span>
         </div>
@@ -114,36 +114,36 @@ export default function IncidentDetailPage() {
           <button
             onClick={() => ackMutation.mutate()}
             disabled={ackMutation.isPending}
-            className="flex-1 py-3 bg-yellow-500 text-white rounded-lg font-medium disabled:opacity-50"
+            className="flex-1 py-3 bg-amber-500/20 text-amber-500 rounded border-2 border-amber-500 font-mono font-bold disabled:opacity-50"
           >
-            {ackMutation.isPending ? "..." : "Acknowledge"}
+            {ackMutation.isPending ? "..." : "ACKNOWLEDGE"}
           </button>
         )}
         {incident.state !== "resolved" && (
           <button
             onClick={() => resolveMutation.mutate()}
             disabled={resolveMutation.isPending}
-            className="flex-1 py-3 bg-green-600 text-white rounded-lg font-medium disabled:opacity-50"
+            className="flex-1 py-3 bg-green-500 text-zinc-900 rounded font-mono font-bold disabled:opacity-50"
           >
-            {resolveMutation.isPending ? "..." : "Resolve"}
+            {resolveMutation.isPending ? "..." : "RESOLVE"}
           </button>
         )}
       </div>
 
       {/* Timeline */}
       <div>
-        <h2 className="font-medium mb-3">Timeline</h2>
+        <h2 className="font-bold text-amber-500 font-mono mb-3">&gt; TIMELINE</h2>
         <div className="space-y-3">
           {incident.timeline?.map((entry, i) => (
-            <div key={i} className="flex gap-3 text-sm">
-              <div className="w-2 h-2 rounded-full bg-gray-400 mt-1.5" />
+            <div key={i} className="flex gap-3 text-sm font-mono">
+              <div className="w-2 h-2 rounded-full bg-amber-500 mt-1.5" />
               <div>
-                <p className="font-medium capitalize">{entry.event}</p>
-                <p className="text-gray-500">
+                <p className="font-bold text-amber-500 uppercase">{entry.event}</p>
+                <p className="text-amber-500/60">
                   {new Date(entry.timestamp).toLocaleString()} · {entry.actor}
                 </p>
                 {entry.note && (
-                  <p className="text-gray-600 mt-1">{entry.note}</p>
+                  <p className="text-amber-500/80 mt-1">{entry.note}</p>
                 )}
               </div>
             </div>

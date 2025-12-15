@@ -38,56 +38,56 @@ export default function TeamPage() {
   const teams: Team[] = data?.teams || [];
 
   return (
-    <div className="p-4">
+    <div className="min-h-full bg-zinc-900 p-4">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-bold">Teams</h1>
+        <h1 className="text-xl font-bold text-amber-500 font-mono tracking-wider">TEAMS</h1>
         <button
           onClick={() => setShowCreate(!showCreate)}
-          className="text-blue-600 font-medium"
+          className="text-amber-500 font-mono font-bold"
         >
-          {showCreate ? "Cancel" : "+ New"}
+          {showCreate ? "[CANCEL]" : "[+ NEW]"}
         </button>
       </div>
 
       {/* Create team form */}
       {showCreate && (
-        <div className="bg-white rounded-lg shadow p-4 mb-4">
+        <div className="bg-zinc-800 rounded border-2 border-amber-500/30 p-4 mb-4">
           <input
             type="text"
             placeholder="Team name"
             value={newTeamName}
             onChange={(e) => setNewTeamName(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-3"
+            className="w-full px-3 py-2 bg-zinc-900 border-2 border-amber-500/30 rounded text-amber-500 font-mono placeholder-amber-500/30 focus:outline-none focus:border-amber-500 mb-3 text-base"
           />
           <input
             type="text"
             placeholder="AWS Account IDs (comma separated)"
             value={newAwsAccounts}
             onChange={(e) => setNewAwsAccounts(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-3"
+            className="w-full px-3 py-2 bg-zinc-900 border-2 border-amber-500/30 rounded text-amber-500 font-mono placeholder-amber-500/30 focus:outline-none focus:border-amber-500 mb-3 text-base"
           />
           <button
             onClick={() => createMutation.mutate()}
             disabled={!newTeamName || createMutation.isPending}
-            className="w-full py-2 bg-blue-600 text-white rounded-lg font-medium disabled:opacity-50"
+            className="w-full py-2 bg-amber-500 text-zinc-900 rounded font-mono font-bold disabled:opacity-50"
           >
-            {createMutation.isPending ? "Creating..." : "Create Team"}
+            {createMutation.isPending ? "CREATING..." : "CREATE TEAM"}
           </button>
         </div>
       )}
 
       {isLoading && (
-        <div className="text-center text-gray-500 py-4">Loading...</div>
+        <div className="text-center text-amber-500 font-mono py-4">&gt; LOADING...</div>
       )}
 
       {/* Team list */}
       <div className="space-y-3">
         {teams.map((team) => (
-          <div key={team.team_id} className="bg-white rounded-lg shadow p-4">
-            <h3 className="font-medium">{team.name}</h3>
+          <div key={team.team_id} className="bg-zinc-800 rounded border-2 border-amber-500/30 p-4">
+            <h3 className="font-bold text-amber-500 font-mono">{team.name}</h3>
             {team.aws_account_ids.length > 0 && (
-              <p className="text-sm text-gray-500 mt-1">
-                AWS Accounts: {team.aws_account_ids.join(", ")}
+              <p className="text-sm text-amber-500/60 mt-1 font-mono">
+                AWS: {team.aws_account_ids.join(", ")}
               </p>
             )}
           </div>
@@ -95,9 +95,9 @@ export default function TeamPage() {
       </div>
 
       {teams.length === 0 && !isLoading && !showCreate && (
-        <div className="text-center text-gray-500 py-8">
-          <p>No teams yet</p>
-          <p className="text-sm mt-2">Create your first team to get started</p>
+        <div className="text-center text-amber-500/60 py-8 font-mono">
+          <p>NO TEAMS YET</p>
+          <p className="text-sm mt-2 text-amber-500/40">CREATE YOUR FIRST TEAM TO GET STARTED</p>
         </div>
       )}
     </div>

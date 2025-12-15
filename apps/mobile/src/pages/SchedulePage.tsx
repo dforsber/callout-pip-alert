@@ -29,11 +29,11 @@ export default function SchedulePage() {
   const onCall: Record<string, OnCallEntry | null> = currentData?.on_call || {};
 
   return (
-    <div className="p-4">
-      <h1 className="text-xl font-bold mb-4">On-Call Schedule</h1>
+    <div className="min-h-full bg-zinc-900 p-4">
+      <h1 className="text-xl font-bold text-amber-500 font-mono tracking-wider mb-4">SCHEDULE</h1>
 
       {isLoading && (
-        <div className="text-center text-gray-500 py-4">Loading...</div>
+        <div className="text-center text-amber-500 font-mono py-4">&gt; LOADING...</div>
       )}
 
       {/* Current on-call by team */}
@@ -41,19 +41,19 @@ export default function SchedulePage() {
         {teams.map((team) => {
           const entry = onCall[team.team_id];
           return (
-            <div key={team.team_id} className="bg-white rounded-lg shadow p-4">
-              <h3 className="font-medium text-gray-900">{team.name}</h3>
+            <div key={team.team_id} className="bg-zinc-800 rounded border-2 border-amber-500/30 p-4">
+              <h3 className="font-bold text-amber-500 font-mono">{team.name}</h3>
               {entry ? (
                 <div className="mt-2">
-                  <p className="text-green-600 font-medium">
-                    🟢 {entry.user_id}
+                  <p className="text-green-500 font-bold font-mono">
+                    [ACTIVE] {entry.user_id}
                   </p>
-                  <p className="text-sm text-gray-500">
-                    Until {new Date(entry.slot.end).toLocaleString()}
+                  <p className="text-sm text-amber-500/60 font-mono">
+                    UNTIL {new Date(entry.slot.end).toLocaleString().toUpperCase()}
                   </p>
                 </div>
               ) : (
-                <p className="text-gray-500 mt-2">No one on-call</p>
+                <p className="text-amber-500/50 mt-2 font-mono">[NONE] NO ONE ON-CALL</p>
               )}
             </div>
           );
@@ -61,9 +61,9 @@ export default function SchedulePage() {
       </div>
 
       {teams.length === 0 && !isLoading && (
-        <div className="text-center text-gray-500 py-8">
-          <p>No teams found</p>
-          <p className="text-sm mt-2">Create a team to manage schedules</p>
+        <div className="text-center text-amber-500/60 py-8 font-mono">
+          <p>NO TEAMS FOUND</p>
+          <p className="text-sm mt-2 text-amber-500/40">CREATE A TEAM TO MANAGE SCHEDULES</p>
         </div>
       )}
     </div>

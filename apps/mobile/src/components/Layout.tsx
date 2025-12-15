@@ -6,14 +6,14 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className="flex flex-col h-screen bg-zinc-900">
       <main className="flex-1 overflow-auto safe-area-top">{children}</main>
 
-      <nav className="flex border-t border-gray-200 bg-white safe-area-bottom">
-        <TabLink to="/incidents" icon={<BellIcon />} label="Incidents" />
-        <TabLink to="/schedule" icon={<CalendarIcon />} label="Schedule" />
-        <TabLink to="/team" icon={<UsersIcon />} label="Team" />
-        <TabLink to="/settings" icon={<GearIcon />} label="Settings" />
+      <nav className="flex border-t-2 border-amber-500/30 bg-zinc-800 safe-area-bottom">
+        <TabLink to="/incidents" icon={<AlertIcon />} label="ALERTS" />
+        <TabLink to="/schedule" icon={<CalendarIcon />} label="SCHEDULE" />
+        <TabLink to="/team" icon={<UsersIcon />} label="TEAM" />
+        <TabLink to="/settings" icon={<GearIcon />} label="CONFIG" />
       </nav>
     </div>
   );
@@ -30,21 +30,21 @@ function TabLink({ to, icon, label }: TabLinkProps) {
     <NavLink
       to={to}
       className={({ isActive }) =>
-        `flex-1 flex flex-col items-center py-2 text-xs ${
-          isActive ? "text-blue-600" : "text-gray-400"
+        `flex-1 flex flex-col items-center py-2 text-xs font-mono ${
+          isActive ? "text-amber-500" : "text-amber-500/40"
         }`
       }
     >
       <span className="w-6 h-6 mb-0.5">{icon}</span>
-      <span className="font-medium">{label}</span>
+      <span className="font-bold">{label}</span>
     </NavLink>
   );
 }
 
-function BellIcon() {
+function AlertIcon() {
   return (
     <svg fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
     </svg>
   );
 }
