@@ -365,7 +365,7 @@ export default function SettingsPage() {
       {/* App info */}
       <div className="bg-zinc-800 rounded border-2 border-amber-500/30 p-4 mb-4">
         <h2 className="text-sm font-bold text-amber-500/70 font-mono mb-2">&gt; SYSTEM INFO</h2>
-        <p className="text-amber-500 font-mono">CALLOUT v0.1.0</p>
+        <p className="text-amber-500 font-mono">RIFF-BOY v0.1.0</p>
       </div>
 
       {/* Sign out or Go to Login */}

@@ -15,12 +15,12 @@ export default function LoginPage() {
   const { signIn, signUp, confirmSignUp, signInWithBiometric, isConfigured, canUseBiometric, biometricType } = useAuth();
   const navigate = useNavigate();
 
-  // Auto-trigger biometric login on mount if available
-  useEffect(() => {
-    if (canUseBiometric && isConfigured) {
-      handleBiometricLogin();
-    }
-  }, [canUseBiometric, isConfigured]);
+  // Note: Auto-biometric login disabled - user must tap the biometric button
+  // useEffect(() => {
+  //   if (canUseBiometric && isConfigured) {
+  //     handleBiometricLogin();
+  //   }
+  // }, [canUseBiometric, isConfigured]);
 
   async function handleBiometricLogin() {
     setError("");
@@ -71,13 +71,13 @@ export default function LoginPage() {
           <div className="w-3 h-3 rounded-full bg-red-500/80" />
           <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
           <div className="w-3 h-3 rounded-full bg-green-500/80" />
-          <span className="ml-2 text-amber-500/70 text-xs font-mono">CALLOUT v0.1.0</span>
+          <span className="ml-2 text-amber-500/70 text-xs font-mono">RIFF-BOY v0.1.0</span>
         </div>
 
         {/* Main Terminal */}
         <div className="border-2 border-t-0 border-amber-500/50 rounded-b-lg bg-zinc-900 p-6">
           <div className="text-center mb-6">
-            <h1 className="text-3xl font-bold text-amber-500 font-mono tracking-wider">CALLOUT</h1>
+            <h1 className="text-3xl font-bold text-amber-500 font-mono tracking-wider">RIFF-BOY</h1>
             <p className="text-amber-500/60 font-mono text-sm mt-1">&gt; INCIDENT MANAGEMENT SYSTEM</p>
           </div>
 
@@ -213,7 +213,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <p className="text-center text-amber-500/30 font-mono text-xs mt-4">
-          SECURE INCIDENT RESPONSE SYSTEM
+          VAULT-TEC APPROVED INCIDENT RESPONSE
         </p>
       </div>
     </div>
