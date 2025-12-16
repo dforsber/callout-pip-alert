@@ -14,6 +14,7 @@ export interface DemoIncident {
   assigned_to: string;
   triggered_at: number;
   acked_at?: number;
+  acked_by?: string;
   resolved_at?: number;
   timeline: DemoTimelineEntry[];
 }
@@ -29,12 +30,6 @@ interface DemoState {
   isRunning: boolean;
   incidents: DemoIncident[];
   teammateAcked: string[]; // IDs acked by "teammate"
-}
-
-interface ToastMessage {
-  id: string;
-  message: string;
-  type: "info" | "success" | "warning";
 }
 
 interface DemoModeContextType {
@@ -59,11 +54,6 @@ interface DemoModeContextType {
   unackIncident: (id: string) => void;
   resolveIncident: (id: string) => void;
   getIncident: (id: string) => DemoIncident | undefined;
-
-  // Toast notifications
-  toasts: ToastMessage[];
-  showToast: (message: string, type?: ToastMessage["type"]) => void;
-  dismissToast: (id: string) => void;
 }
 
 const DemoModeContext = createContext<DemoModeContextType | null>(null);
@@ -79,7 +69,6 @@ export function DemoModeProvider({ children }: DemoModeProviderProps) {
     incidents: [],
     teammateAcked: [],
   });
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   // Load settings on mount
   useEffect(() => {
@@ -143,6 +132,7 @@ export function DemoModeProvider({ children }: DemoModeProviderProps) {
       if (!incident || incident.state !== "triggered") return prev;
 
       const now = Date.now();
+      const ackerName = actor || "You";
       const isTeammate = actor && actor !== "You";
 
       return {
@@ -153,12 +143,13 @@ export function DemoModeProvider({ children }: DemoModeProviderProps) {
                 ...i,
                 state: "acked" as const,
                 acked_at: now,
+                acked_by: ackerName,
                 timeline: [
                   ...i.timeline,
                   {
                     timestamp: now,
                     event: "acknowledged",
-                    actor: actor || "You",
+                    actor: ackerName,
                   },
                 ],
               }
@@ -184,6 +175,7 @@ export function DemoModeProvider({ children }: DemoModeProviderProps) {
                 ...i,
                 state: "triggered" as const,
                 acked_at: undefined,
+                acked_by: undefined,
                 timeline: [
                   ...i.timeline,
                   {
@@ -244,21 +236,6 @@ export function DemoModeProvider({ children }: DemoModeProviderProps) {
     };
   }, [settings.enabled, demoState.incidents, ackIncident, unackIncident]);
 
-  // Toast management
-  const showToast = useCallback((message: string, type: ToastMessage["type"] = "info") => {
-    const id = `toast-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    setToasts((prev) => [...prev, { id, message, type }]);
-
-    // Auto-dismiss after 4 seconds
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 4000);
-  }, []);
-
-  const dismissToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  }, []);
-
   const value: DemoModeContextType = {
     settings,
     isEnabled: settings.enabled,
@@ -274,9 +251,6 @@ export function DemoModeProvider({ children }: DemoModeProviderProps) {
     unackIncident,
     resolveIncident,
     getIncident,
-    toasts,
-    showToast,
-    dismissToast,
   };
 
   return <DemoModeContext.Provider value={value}>{children}</DemoModeContext.Provider>;

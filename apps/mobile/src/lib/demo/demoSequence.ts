@@ -1,4 +1,4 @@
-// Demo sequence orchestration - creates the escalating alert scenario
+// Demo sequence orchestration - creates an escalating alert game
 
 import type { DemoIncident } from "../../hooks/useDemoMode";
 import { generateDemoIncident, getRandomTeammate } from "./demoData";
@@ -6,7 +6,7 @@ import { generateDemoIncident, getRandomTeammate } from "./demoData";
 export interface DemoSequenceCallbacks {
   addIncident: (incident: DemoIncident) => void;
   ackIncident: (id: string, actor: string) => void;
-  showToast: (message: string, type?: "info" | "success" | "warning") => void;
+  resolveIncident: (id: string) => void;
   playAlert: (severity: "critical" | "warning" | "info") => void;
   onComplete: () => void;
   getIncidents: () => DemoIncident[];
@@ -15,13 +15,17 @@ export interface DemoSequenceCallbacks {
 interface SequenceState {
   isRunning: boolean;
   timeouts: ReturnType<typeof setTimeout>[];
-  checkInterval: ReturnType<typeof setInterval> | null;
+  intervals: ReturnType<typeof setInterval>[];
+  incidentCount: number;
+  teammateAckCount: number;
 }
 
 let sequenceState: SequenceState = {
   isRunning: false,
   timeouts: [],
-  checkInterval: null,
+  intervals: [],
+  incidentCount: 0,
+  teammateAckCount: 0,
 };
 
 /**
@@ -29,11 +33,9 @@ let sequenceState: SequenceState = {
  */
 function clearAllTimers(): void {
   sequenceState.timeouts.forEach((t) => clearTimeout(t));
+  sequenceState.intervals.forEach((i) => clearInterval(i));
   sequenceState.timeouts = [];
-  if (sequenceState.checkInterval) {
-    clearInterval(sequenceState.checkInterval);
-    sequenceState.checkInterval = null;
-  }
+  sequenceState.intervals = [];
 }
 
 /**
@@ -45,20 +47,7 @@ function scheduleAction(fn: () => void, delayMs: number): void {
 }
 
 /**
- * Start the demo sequence
- *
- * Timeline:
- * 0s    - Demo starts
- * 0.5s  - Warning #1 appears
- * 2s    - Warning #2 appears
- * 4s    - Critical #1 appears (Geiger starts)
- * 5.5s  - Critical #2 appears (Geiger intensifies)
- * 7s    - Critical #3 appears (Geiger high)
- * 10s   - "Teammate" acks Critical #1
- * 12s   - "Teammate" acks Warning #1
- * 15s   - More incidents if < 10 total
- * ...   - User can ack remaining
- * End   - All acked = demo complete
+ * Start the demo sequence - a game where user must ack all incidents to win
  */
 export function startDemoSequence(callbacks: DemoSequenceCallbacks): void {
   if (sequenceState.isRunning) {
@@ -66,126 +55,176 @@ export function startDemoSequence(callbacks: DemoSequenceCallbacks): void {
     return;
   }
 
-  console.log("[Demo] Starting demo sequence");
+  console.log("[Demo] Starting demo game");
   sequenceState.isRunning = true;
+  sequenceState.incidentCount = 0;
+  sequenceState.teammateAckCount = 0;
 
-  const { addIncident, ackIncident, showToast, playAlert, onComplete, getIncidents } = callbacks;
+  const { addIncident, ackIncident, resolveIncident, playAlert, onComplete, getIncidents } = callbacks;
 
-  // Track created incidents for teammate ack references
+  // Track created incidents
   const createdIncidents: DemoIncident[] = [];
 
-  // Helper to add incident and track it
-  const addAndTrack = (severity: "critical" | "warning" | "info"): DemoIncident => {
-    const incident = generateDemoIncident(severity);
+  // Helper to add incident - adds FIRST, then plays sound
+  const addAndTrack = (severity: "critical" | "warning" | "info"): DemoIncident | null => {
+    if (!sequenceState.isRunning) return null;
+    if (getIncidents().length >= 10) return null;
+
+    const incident = generateDemoIncident(severity, sequenceState.incidentCount++);
     createdIncidents.push(incident);
+
+    // Add incident FIRST
     addIncident(incident);
+
+    // Play sound AFTER (with tiny delay to ensure UI updates first)
+    setTimeout(() => {
+      if (sequenceState.isRunning) {
+        playAlert(severity);
+      }
+    }, 50);
+
     return incident;
   };
 
-  // Phase 1: Initial warnings (0.5s, 2s)
-  scheduleAction(() => {
-    if (!sequenceState.isRunning) return;
-    addAndTrack("warning");
-    playAlert("warning");
-  }, 500);
+  // Helper to have teammate ack a random triggered incident
+  const teammateAck = (): boolean => {
+    if (!sequenceState.isRunning) return false;
 
-  scheduleAction(() => {
-    if (!sequenceState.isRunning) return;
-    addAndTrack("warning");
-    playAlert("warning");
-  }, 2000);
+    const incidents = getIncidents();
+    const triggered = incidents.filter((i) => i.state === "triggered");
 
-  // Phase 2: Critical alarms (4s, 5.5s, 7s)
-  scheduleAction(() => {
-    if (!sequenceState.isRunning) return;
-    addAndTrack("critical");
-    playAlert("critical");
-  }, 4000);
+    if (triggered.length === 0) return false;
 
-  scheduleAction(() => {
-    if (!sequenceState.isRunning) return;
-    addAndTrack("critical");
-    playAlert("critical");
-  }, 5500);
+    // Pick a random triggered incident (prefer older ones)
+    const incident = triggered[Math.floor(Math.random() * Math.min(3, triggered.length))];
+    const teammate = getRandomTeammate();
 
-  scheduleAction(() => {
-    if (!sequenceState.isRunning) return;
-    addAndTrack("critical");
-    playAlert("critical");
-  }, 7000);
+    ackIncident(incident.incident_id, teammate);
+    sequenceState.teammateAckCount++;
 
-  // Phase 3: Teammate acks (10s, 12s)
-  scheduleAction(() => {
-    if (!sequenceState.isRunning) return;
-    // Find first triggered critical
-    const criticals = createdIncidents.filter(
-      (i) => i.severity === "critical" && getIncidents().find((x) => x.incident_id === i.incident_id)?.state === "triggered"
-    );
-    if (criticals.length > 0) {
-      const teammate = getRandomTeammate();
-      const incident = criticals[0];
-      ackIncident(incident.incident_id, teammate);
-      showToast(`${teammate} acknowledged ${incident.alarm_name}`, "success");
+    return true;
+  };
+
+  // Helper to auto-resolve an acked incident (simulating CloudWatch returning to OK)
+  const autoResolve = (): boolean => {
+    if (!sequenceState.isRunning) return false;
+
+    const incidents = getIncidents();
+    const acked = incidents.filter((i) => i.state === "acked");
+
+    if (acked.length === 0) return false;
+
+    // Resolve oldest acked incident
+    const oldest = acked.reduce((a, b) => (a.acked_at || 0) < (b.acked_at || 0) ? a : b);
+    resolveIncident(oldest.incident_id);
+
+    return true;
+  };
+
+  // Check for win condition
+  const checkWinCondition = (): boolean => {
+    const incidents = getIncidents();
+    const triggered = incidents.filter((i) => i.state === "triggered");
+    const acked = incidents.filter((i) => i.state === "acked");
+
+    // Win when: we've had enough incidents AND none are triggered AND none are acked
+    if (sequenceState.incidentCount >= 8 && triggered.length === 0 && acked.length === 0) {
+      return true;
     }
-  }, 10000);
+    return false;
+  };
+
+  // === PHASE 1: Initial wave (0-3s) ===
+  // Immediate warning
+  addAndTrack("warning");
+
+  // More warnings
+  scheduleAction(() => addAndTrack("warning"), 1500);
+  scheduleAction(() => addAndTrack("warning"), 2500);
+
+  // === PHASE 2: Critical wave (3-6s) ===
+  scheduleAction(() => addAndTrack("critical"), 3500);
+  scheduleAction(() => addAndTrack("critical"), 4500);
+  scheduleAction(() => addAndTrack("critical"), 5500);
+
+  // === PHASE 3: Teammate helps (6-10s) ===
+  scheduleAction(() => teammateAck(), 7000);
+  scheduleAction(() => teammateAck(), 9000);
+
+  // === PHASE 4: More chaos + auto-resolve (10s+) ===
+  scheduleAction(() => {
+    addAndTrack(Math.random() < 0.4 ? "critical" : "warning");
+  }, 11000);
+
+  scheduleAction(() => autoResolve(), 12000);
 
   scheduleAction(() => {
-    if (!sequenceState.isRunning) return;
-    // Find first triggered warning
-    const warnings = createdIncidents.filter(
-      (i) => i.severity === "warning" && getIncidents().find((x) => x.incident_id === i.incident_id)?.state === "triggered"
-    );
-    if (warnings.length > 0) {
-      const teammate = getRandomTeammate();
-      const incident = warnings[0];
-      ackIncident(incident.incident_id, teammate);
-      showToast(`${teammate} acknowledged ${incident.alarm_name}`, "success");
-    }
-  }, 12000);
+    addAndTrack(Math.random() < 0.3 ? "critical" : "warning");
+  }, 14000);
 
-  // Phase 4: More incidents to fill up to 8-9 (15s, 18s, 21s)
-  scheduleAction(() => {
-    if (!sequenceState.isRunning) return;
-    if (getIncidents().length < 8) {
-      addAndTrack(Math.random() < 0.5 ? "critical" : "warning");
-      playAlert("warning");
-    }
-  }, 15000);
+  scheduleAction(() => teammateAck(), 15000);
+  scheduleAction(() => autoResolve(), 16000);
 
-  scheduleAction(() => {
-    if (!sequenceState.isRunning) return;
-    if (getIncidents().length < 9) {
-      addAndTrack("warning");
-      playAlert("warning");
-    }
-  }, 18000);
-
-  scheduleAction(() => {
-    if (!sequenceState.isRunning) return;
-    if (getIncidents().length < 10) {
-      addAndTrack("info");
-      playAlert("info");
-    }
-  }, 21000);
-
-  // Phase 5: Check for completion every 2 seconds
-  sequenceState.checkInterval = setInterval(() => {
+  // === CONTINUOUS GAME LOOP ===
+  // Every 3-5 seconds: maybe add incident, maybe teammate acks, maybe auto-resolve
+  const gameLoopInterval = setInterval(() => {
     if (!sequenceState.isRunning) {
-      clearAllTimers();
+      clearInterval(gameLoopInterval);
       return;
     }
 
     const incidents = getIncidents();
-    const unacked = incidents.filter((i) => i.state === "triggered");
+    const triggered = incidents.filter((i) => i.state === "triggered");
+    const acked = incidents.filter((i) => i.state === "acked");
 
-    // Demo complete when all incidents are acked or resolved
-    if (incidents.length > 0 && unacked.length === 0) {
-      console.log("[Demo] All incidents handled - demo complete!");
-      showToast("DEMO COMPLETE - All alerts acknowledged!", "success");
+    // Check win condition
+    if (checkWinCondition()) {
+      console.log("[Demo] Player wins!");
       stopDemoSequence();
       onComplete();
+      return;
     }
-  }, 2000);
+
+    // Random actions based on game state
+    const roll = Math.random();
+
+    // If not many incidents, add more
+    if (incidents.length < 6 && roll < 0.4) {
+      const severity = Math.random() < 0.3 ? "critical" : (Math.random() < 0.5 ? "warning" : "info");
+      addAndTrack(severity);
+    }
+    // Teammate helps occasionally (but not too much - player needs to work!)
+    else if (triggered.length > 3 && roll < 0.5 && sequenceState.teammateAckCount < 5) {
+      teammateAck();
+    }
+    // Auto-resolve acked incidents
+    else if (acked.length > 0 && roll < 0.6) {
+      // Only auto-resolve if acked for at least 4 seconds
+      const oldestAcked = acked.reduce((a, b) => (a.acked_at || 0) < (b.acked_at || 0) ? a : b);
+      if (oldestAcked.acked_at && Date.now() - oldestAcked.acked_at > 4000) {
+        autoResolve();
+      }
+    }
+    // Add more chaos if player is doing well
+    else if (triggered.length < 2 && incidents.length < 8 && roll < 0.7) {
+      addAndTrack(Math.random() < 0.5 ? "critical" : "warning");
+    }
+
+  }, 3500);
+
+  sequenceState.intervals.push(gameLoopInterval);
+
+  // Timeout: After 60 seconds, if not won, game over
+  scheduleAction(() => {
+    if (!sequenceState.isRunning) return;
+
+    const incidents = getIncidents();
+    const triggered = incidents.filter((i) => i.state === "triggered");
+
+    console.log("[Demo] Time's up!", triggered.length > 0 ? `${triggered.length} remaining` : "All handled");
+    stopDemoSequence();
+    onComplete();
+  }, 60000);
 }
 
 /**

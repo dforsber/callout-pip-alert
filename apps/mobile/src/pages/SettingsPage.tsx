@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../lib/auth";
 import { useNavigation } from "../lib/navigation";
 import { useAudio } from "../hooks/useAudio";
@@ -107,9 +107,15 @@ export default function SettingsPage() {
     resetDemo,
     addIncident,
     ackIncident,
-    showToast,
+    resolveIncident,
     incidents: demoIncidents,
   } = useDemoMode();
+
+  // Ref to always get latest incidents (avoids stale closure in demo callbacks)
+  const demoIncidentsRef = useRef(demoIncidents);
+  useEffect(() => {
+    demoIncidentsRef.current = demoIncidents;
+  }, [demoIncidents]);
 
   useEffect(() => {
     setBackends(getBackends());
@@ -219,14 +225,14 @@ export default function SettingsPage() {
     startDemoSequence({
       addIncident,
       ackIncident,
-      showToast,
+      resolveIncident,
       playAlert: (severity) => {
         playAlert(severity);
       },
       onComplete: () => {
         stopDemo();
       },
-      getIncidents: () => demoIncidents,
+      getIncidents: () => demoIncidentsRef.current,
     });
   };
 
@@ -702,9 +708,17 @@ export default function SettingsPage() {
             {/* Demo status */}
             {demoIncidents.length > 0 && (
               <div className="p-2 bg-zinc-900 border border-amber-500/20 rounded mb-3">
-                <p className="text-xs text-amber-500/70 font-mono text-center">
-                  ACTIVE INCIDENTS: {demoIncidents.filter(i => i.state === "triggered").length} / {demoIncidents.length}
-                </p>
+                <div className="flex justify-between text-xs font-mono">
+                  <span className="text-red-500">
+                    UNACKED: {demoIncidents.filter(i => i.state === "triggered").length}
+                  </span>
+                  <span className="text-amber-500">
+                    ACKED: {demoIncidents.filter(i => i.state === "acked").length}
+                  </span>
+                  <span className="text-green-500">
+                    RESOLVED: {demoIncidents.filter(i => i.state === "resolved").length}
+                  </span>
+                </div>
               </div>
             )}
 
