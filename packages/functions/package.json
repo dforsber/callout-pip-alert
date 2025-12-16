@@ -5,18 +5,27 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.705.0",
-    "@aws-sdk/lib-dynamodb": "^3.705.0",
-    "@aws-sdk/client-secrets-manager": "^3.705.0",
     "@aws-sdk/client-scheduler": "^3.705.0",
+    "@aws-sdk/client-secrets-manager": "^3.705.0",
+    "@aws-sdk/client-sns": "^3.705.0",
+    "@aws-sdk/lib-dynamodb": "^3.705.0",
+    "@aws-sdk/util-dynamodb": "^3.705.0",
+    "jsonwebtoken": "^9.0.2",
     "ulid": "^2.3.0"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.146",
+    "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^22.10.2",
-    "typescript": "^5.7.2"
+    "@vitest/coverage-v8": "^4.0.16",
+    "typescript": "^5.7.2",
+    "vitest": "^4.0.16"
   }
 }

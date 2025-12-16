@@ -1,3 +1,5 @@
+import type { APIGatewayProxyEventV2 } from "aws-lambda";
+
 export interface User {
   user_id: string;
   email: string;
@@ -43,7 +45,9 @@ export interface Incident {
   escalation_rule_id?: string;
   triggered_at: number;
   acked_at?: number;
+  acked_by?: string;
   resolved_at?: number;
+  ttl?: number; // DynamoDB TTL - auto-delete after 24h
   timeline: TimelineEntry[];
 }
 
@@ -58,6 +62,7 @@ export interface Device {
   user_id: string;
   device_token: string;
   platform: "ios" | "android" | "web";
+  sandbox?: boolean; // true for development builds (USB/Xcode)
   created_at: number;
 }
 
@@ -77,6 +82,21 @@ export function jsonResponse<T>(statusCode: number, body: T): ApiResponse<T> {
   };
 }
 
-export function getUserIdFromEvent(event: { requestContext?: { authorizer?: { jwt?: { claims?: { sub?: string } } } } }): string | null {
-  return event.requestContext?.authorizer?.jwt?.claims?.sub ?? null;
+// Extended event type that includes JWT authorizer context
+export interface APIGatewayProxyEventV2WithJWT extends APIGatewayProxyEventV2 {
+  requestContext: APIGatewayProxyEventV2["requestContext"] & {
+    authorizer?: {
+      jwt?: {
+        claims?: {
+          sub?: string;
+          [key: string]: unknown;
+        };
+      };
+    };
+  };
+}
+
+export function getUserIdFromEvent(event: APIGatewayProxyEventV2WithJWT | APIGatewayProxyEventV2): string | null {
+  const authorizer = (event.requestContext as APIGatewayProxyEventV2WithJWT["requestContext"]).authorizer;
+  return authorizer?.jwt?.claims?.sub ?? null;
 }

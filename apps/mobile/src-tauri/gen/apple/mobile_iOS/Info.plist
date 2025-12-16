@@ -41,6 +41,6 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>NSFaceIDUsageDescription</key>
-	<string>Riff-Boy uses Face ID to securely sign you in without entering your password.</string>
+	<string>Pip-Alert uses Face ID to securely sign you in without entering your password.</string>
 </dict>
 </plist>

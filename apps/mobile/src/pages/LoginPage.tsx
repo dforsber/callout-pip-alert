@@ -71,13 +71,13 @@ export default function LoginPage() {
           <div className="w-3 h-3 rounded-full bg-red-500/80" />
           <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
           <div className="w-3 h-3 rounded-full bg-green-500/80" />
-          <span className="ml-2 text-amber-500/70 text-xs font-mono">RIFF-BOY v0.1.0</span>
+          <span className="ml-2 text-amber-500/70 text-xs font-mono">PIP-ALERT v0.1.0</span>
         </div>
 
         {/* Main Terminal */}
         <div className="border-2 border-t-0 border-amber-500/50 rounded-b-lg bg-zinc-900 p-6 border-glow">
           <div className="text-center mb-6">
-            <h1 className="text-3xl font-bold text-amber-500 font-mono tracking-wider text-glow">RIFF-BOY</h1>
+            <h1 className="text-3xl font-bold text-amber-500 font-mono tracking-wider text-glow">PIP-ALERT</h1>
             <p className="text-amber-500/60 font-mono text-sm mt-1">{">"} INCIDENT MANAGEMENT SYSTEM</p>
           </div>
 
@@ -213,7 +213,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <p className="text-center text-amber-500/30 font-mono text-xs mt-4">
-          VAULT-TEC APPROVED INCIDENT RESPONSE
+          FAULT-TEC APPROVED INCIDENT RESPONSE
         </p>
       </div>
     </div>

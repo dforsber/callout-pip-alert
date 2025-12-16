@@ -1,7 +1,7 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import { docClient, GetCommand, PutCommand, DeleteCommand, QueryCommand, ScanCommand } from "../lib/dynamo.js";
 import { jsonResponse, getUserIdFromEvent, Schedule, User } from "../types/index.js";
-import { ulid } from "ulid";
+import { randomUUID } from "crypto";
 
 const SCHEDULES_TABLE = process.env.SCHEDULES_TABLE!;
 const TEAMS_TABLE = process.env.TEAMS_TABLE!;
@@ -97,7 +97,7 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
 
       const schedule: Schedule = {
         team_id: teamId,
-        slot_id: ulid(),
+        slot_id: randomUUID(),
         user_id: slotUserId,
         start,
         end,

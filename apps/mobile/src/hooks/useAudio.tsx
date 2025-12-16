@@ -44,9 +44,9 @@ interface AudioContextType {
   setMasterVolume: (volume: number) => void;
 
   // Sound playback (no-op if disabled or not initialized)
-  playUISound: (sound: UISound) => void;
+  playUISound: (sound: UISound) => void | Promise<void>;
   playBootSound: (sound: BootSound) => void;
-  playAlert: (severity: AlertSeverity) => AlertController | null;
+  playAlert: (severity: AlertSeverity) => AlertController | null | Promise<AlertController | null>;
 
   // Alert control
   stopCurrentAlert: () => void;
@@ -129,9 +129,17 @@ export function AudioProvider({ children }: AudioProviderProps) {
     audioEngine.setMasterVolume(clampedVolume);
   }, [updateSettings]);
 
-  const playUISound = useCallback((sound: UISound) => {
-    console.log(`[Audio] playUISound(${sound}): initialized=${isInitialized}, enabled=${settings.enabled}, ui=${settings.categories.ui}`);
-    if (!isInitialized || !settings.enabled || !settings.categories.ui) return;
+  const playUISound = useCallback(async (sound: UISound) => {
+    // Auto-initialize on first user interaction
+    if (!isInitialized) {
+      await audioEngine.initialize();
+      if (audioEngine.isInitialized()) {
+        audioEngine.setMasterVolume(settings.masterVolume);
+        setIsInitialized(true);
+      }
+    }
+
+    if (!audioEngine.isInitialized() || !settings.enabled || !settings.categories.ui) return;
 
     switch (sound) {
       case "click":
@@ -153,7 +161,7 @@ export function AudioProvider({ children }: AudioProviderProps) {
         playError(audioEngine);
         break;
     }
-  }, [isInitialized, settings.enabled, settings.categories.ui]);
+  }, [isInitialized, settings.enabled, settings.categories.ui, settings.masterVolume]);
 
   const playBootSound = useCallback((sound: BootSound) => {
     if (!isInitialized || !settings.enabled || !settings.categories.boot) return;
@@ -171,8 +179,17 @@ export function AudioProvider({ children }: AudioProviderProps) {
     }
   }, [isInitialized, settings.enabled, settings.categories.boot]);
 
-  const playAlertSound = useCallback((severity: AlertSeverity): AlertController | null => {
-    if (!isInitialized || !settings.enabled || !settings.categories.alerts) return null;
+  const playAlertSound = useCallback(async (severity: AlertSeverity): Promise<AlertController | null> => {
+    // Auto-initialize on first user interaction
+    if (!isInitialized) {
+      await audioEngine.initialize();
+      if (audioEngine.isInitialized()) {
+        audioEngine.setMasterVolume(settings.masterVolume);
+        setIsInitialized(true);
+      }
+    }
+
+    if (!audioEngine.isInitialized() || !settings.enabled || !settings.categories.alerts) return null;
 
     // Stop any current alert
     if (currentAlertRef.current) {
@@ -193,7 +210,7 @@ export function AudioProvider({ children }: AudioProviderProps) {
         playInfoChime(audioEngine);
         return null;
     }
-  }, [isInitialized, settings.enabled, settings.categories.alerts]);
+  }, [isInitialized, settings.enabled, settings.categories.alerts, settings.masterVolume]);
 
   const stopCurrentAlert = useCallback(() => {
     if (currentAlertRef.current) {

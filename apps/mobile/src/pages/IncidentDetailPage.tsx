@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient, QueryClient } from "@tanstack/re
 import { incidentsApi } from "../lib/api";
 import { useNavigation } from "../lib/navigation";
 import { useAudio } from "../hooks/useAudio";
+import { useAuth } from "../lib/auth";
 
 // Helper to get cached incident data
 function getCachedIncident(queryClient: QueryClient, incidentId: string) {
@@ -24,6 +25,7 @@ interface Incident {
   assigned_to: string;
   triggered_at: number;
   acked_at?: number;
+  acked_by?: string;
   resolved_at?: number;
   timeline: TimelineEntry[];
 }
@@ -36,6 +38,8 @@ export default function IncidentDetailPage({ incidentId }: IncidentDetailPagePro
   const { goBack } = useNavigation();
   const queryClient = useQueryClient();
   const { playUISound } = useAudio();
+  const { user } = useAuth();
+  const username = user?.getUsername() || undefined;
 
   const { data, isLoading } = useQuery({
     queryKey: ["incident", incidentId],
@@ -50,7 +54,7 @@ export default function IncidentDetailPage({ incidentId }: IncidentDetailPagePro
   });
 
   const ackMutation = useMutation({
-    mutationFn: () => incidentsApi.ack(incidentId!),
+    mutationFn: () => incidentsApi.ack(incidentId!, username),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["incident", incidentId] });
       queryClient.invalidateQueries({ queryKey: ["incidents"] });
@@ -97,7 +101,7 @@ export default function IncidentDetailPage({ incidentId }: IncidentDetailPagePro
           playUISound("click");
           goBack();
         }}
-        className="text-amber-500 font-mono font-bold mb-4 flex items-center gap-1"
+        className="text-amber-500 font-mono font-bold mb-4 flex items-center gap-1 active:scale-95 active:opacity-70 transition-all"
       >
         {"<"} BACK
       </button>
@@ -119,7 +123,7 @@ export default function IncidentDetailPage({ incidentId }: IncidentDetailPagePro
           playUISound("click");
           goBack();
         }}
-        className="bg-zinc-800 rounded border-2 border-amber-500/30 p-4 mb-6 cursor-pointer active:bg-zinc-700"
+        className="bg-zinc-800 rounded border-2 border-amber-500/30 p-4 mb-6 cursor-pointer active:scale-[0.98] active:brightness-90 transition-transform"
       >
         <div className="flex items-center justify-between mb-4">
           <span className="text-amber-500/70 font-mono">STATUS</span>
@@ -147,7 +151,7 @@ export default function IncidentDetailPage({ incidentId }: IncidentDetailPagePro
               ackMutation.mutate();
             }}
             disabled={ackMutation.isPending}
-            className="w-full py-3 bg-amber-500/20 text-amber-500 rounded border-2 border-amber-500 font-mono font-bold disabled:opacity-50"
+            className="w-full py-3 bg-amber-500/20 text-amber-500 rounded border-2 border-amber-500 font-mono font-bold disabled:opacity-50 active:scale-[0.98] active:bg-amber-500/40 transition-all"
           >
             {ackMutation.isPending ? "..." : "ACKNOWLEDGE"}
           </button>
@@ -168,7 +172,7 @@ export default function IncidentDetailPage({ incidentId }: IncidentDetailPagePro
               unackMutation.mutate();
             }}
             disabled={unackMutation.isPending}
-            className="w-full py-2 bg-zinc-800 text-amber-500/70 rounded-b border border-amber-500/30 font-mono text-sm disabled:opacity-50"
+            className="w-full py-2 bg-zinc-800 text-amber-500/70 rounded-b border border-amber-500/30 font-mono text-sm disabled:opacity-50 active:scale-[0.98] active:bg-zinc-700 transition-all"
           >
             {unackMutation.isPending ? "..." : "UNACKNOWLEDGE"}
           </button>

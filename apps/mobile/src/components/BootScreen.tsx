@@ -7,10 +7,10 @@ interface BootScreenProps {
 }
 
 const BOOT_LINES = [
-  "VAULT-TEC INDUSTRIES (R) TERMLINK PROTOCOL",
-  "CALLOUT RIFF-BOY v0.1.0",
+  "FAULT-TEC INDUSTRIES (R) TERMLINK PROTOCOL",
+  "CALLOUT PIP-ALERT v0.1.0",
   "",
-  "COPYRIGHT 2077 VAULT-TEC INDUSTRIES",
+  "COPYRIGHT 2077 FAULT-TEC INDUSTRIES",
   "",
   "INITIALIZING SYSTEM...",
   "LOADING INCIDENT PROTOCOLS...",
@@ -125,14 +125,20 @@ export default function BootScreen({ onComplete }: BootScreenProps) {
           <div className="absolute bottom-4 left-4 w-8 h-8 border-b-2 border-l-2 border-amber-500 rounded-bl-lg" />
           <div className="absolute bottom-4 right-4 w-8 h-8 border-b-2 border-r-2 border-amber-500 rounded-br-lg" />
 
-          {/* RIFF-BOY Logo */}
-          <div className="text-amber-500 font-mono text-center mb-6 leading-none whitespace-pre text-glow" style={{ fontSize: '8px', letterSpacing: '1px' }}>
-{`██████╗ ██╗███████╗███████╗    ██████╗  ██████╗ ██╗   ██╗
-██╔══██╗██║██╔════╝██╔════╝    ██╔══██╗██╔═══██╗╚██╗ ██╔╝
-██████╔╝██║█████╗  █████╗█████╗██████╔╝██║   ██║ ╚████╔╝
-██╔══██╗██║██╔══╝  ██╔══╝╚════╝██╔══██╗██║   ██║  ╚██╔╝
-██║  ██║██║██║     ██║         ██████╔╝╚██████╔╝   ██║
-╚═╝  ╚═╝╚═╝╚═╝     ╚═╝         ╚═════╝  ╚═════╝    ╚═╝`}
+          {/* PIP-ALERT Logo */}
+          <div className="text-amber-500 font-mono text-center mb-6 leading-none whitespace-pre text-glow" style={{ fontSize: '10px', letterSpacing: '1px' }}>
+{`██████╗ ██╗██████╗
+██╔══██╗██║██╔══██╗
+██████╔╝██║██████╔╝
+██╔═══╝ ██║██╔═══╝
+██║     ██║██║
+╚═╝     ╚═╝╚═╝
+ █████╗ ██╗     ███████╗██████╗ ████████╗
+██╔══██╗██║     ██╔════╝██╔══██╗╚══██╔══╝
+███████║██║     █████╗  ██████╔╝   ██║
+██╔══██║██║     ██╔══╝  ██╔══██╗   ██║
+██║  ██║███████╗███████╗██║  ██║   ██║
+╚═╝  ╚═╝╚══════╝╚══════╝╚═╝  ╚═╝   ╚═╝`}
           </div>
 
           {/* Boot text - all lines pre-rendered for stable layout */}
@@ -148,7 +154,7 @@ export default function BootScreen({ onComplete }: BootScreenProps) {
                   className={`h-6 leading-6 ${
                     typedText.includes("SYSTEM READY")
                       ? "text-green-500 font-bold text-glow-green"
-                      : typedText.includes("RIFF-BOY")
+                      : typedText.includes("PIP-ALERT")
                       ? "text-amber-500 font-bold text-glow"
                       : "text-amber-500/80"
                   }`}

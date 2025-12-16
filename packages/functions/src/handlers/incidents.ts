@@ -89,22 +89,27 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
         return jsonResponse(400, { error: "Missing incident ID" });
       }
 
+      const body = JSON.parse(event.body || "{}");
+      // Use display name from request, fallback to userId
+      const ackedByName = body.acked_by_name || userId;
+
       const now = Date.now();
       const timelineEntry: TimelineEntry = {
         timestamp: now,
         event: "acked",
-        actor: userId,
+        actor: ackedByName,
       };
 
       const result = await docClient.send(
         new UpdateCommand({
           TableName: INCIDENTS_TABLE,
           Key: { incident_id: incidentId },
-          UpdateExpression: "SET #state = :state, acked_at = :acked_at, timeline = list_append(timeline, :entry)",
+          UpdateExpression: "SET #state = :state, acked_at = :acked_at, acked_by = :acked_by, timeline = list_append(timeline, :entry)",
           ExpressionAttributeNames: { "#state": "state" },
           ExpressionAttributeValues: {
             ":state": "acked",
             ":acked_at": now,
+            ":acked_by": ackedByName,
             ":entry": [timelineEntry],
           },
           ReturnValues: "ALL_NEW",
@@ -112,6 +117,38 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
       );
 
       // TODO: Cancel EventBridge escalation rule
+
+      return jsonResponse(200, { incident: result.Attributes });
+    }
+
+    // POST /incidents/{id}/unack - Unacknowledge (return to triggered)
+    if (method === "POST" && path.match(/^\/incidents\/[^/]+\/unack$/)) {
+      const incidentId = event.pathParameters?.id;
+      if (!incidentId) {
+        return jsonResponse(400, { error: "Missing incident ID" });
+      }
+
+      const now = Date.now();
+      const timelineEntry: TimelineEntry = {
+        timestamp: now,
+        event: "triggered", // Back to triggered state
+        actor: userId,
+        note: "Unacknowledged",
+      };
+
+      const result = await docClient.send(
+        new UpdateCommand({
+          TableName: INCIDENTS_TABLE,
+          Key: { incident_id: incidentId },
+          UpdateExpression: "SET #state = :state, timeline = list_append(timeline, :entry) REMOVE acked_at, acked_by",
+          ExpressionAttributeNames: { "#state": "state" },
+          ExpressionAttributeValues: {
+            ":state": "triggered",
+            ":entry": [timelineEntry],
+          },
+          ReturnValues: "ALL_NEW",
+        })
+      );
 
       return jsonResponse(200, { incident: result.Attributes });
     }

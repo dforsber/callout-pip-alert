@@ -1,7 +1,7 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import { docClient, GetCommand, PutCommand, UpdateCommand, QueryCommand, ScanCommand } from "../lib/dynamo.js";
 import { jsonResponse, getUserIdFromEvent, Team, User } from "../types/index.js";
-import { ulid } from "ulid";
+import { randomUUID } from "crypto";
 
 const TEAMS_TABLE = process.env.TEAMS_TABLE!;
 const USERS_TABLE = process.env.USERS_TABLE!;
@@ -59,7 +59,7 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
       }
 
       const team: Team = {
-        team_id: ulid(),
+        team_id: randomUUID(),
         name,
         aws_account_ids: aws_account_ids || [],
         escalation_policy: {

@@ -1,12 +1,11 @@
 import type { SNSEvent } from "aws-lambda";
 import { docClient, PutCommand, QueryCommand, ScanCommand } from "../lib/dynamo.js";
-import { Incident, Team, Schedule, Device, TimelineEntry } from "../types/index.js";
-import { ulid } from "ulid";
+import { Incident, Team, Schedule, TimelineEntry } from "../types/index.js";
+import { randomUUID } from "crypto";
 
 const INCIDENTS_TABLE = process.env.INCIDENTS_TABLE!;
 const TEAMS_TABLE = process.env.TEAMS_TABLE!;
 const SCHEDULES_TABLE = process.env.SCHEDULES_TABLE!;
-const DEVICES_TABLE = process.env.DEVICES_TABLE!;
 
 interface CloudWatchAlarmMessage {
   AlarmName: string;
@@ -42,14 +41,14 @@ export async function handler(event: SNSEvent): Promise<void> {
       const onCallUserId = await findOnCallUser(team.team_id);
       if (!onCallUserId) {
         console.error(`No on-call user for team: ${team.team_id}`);
-        // Could notify all team members as fallback
         continue;
       }
 
-      // Create incident
+      // Create incident with 24h TTL
       const now = Date.now();
+      const ttlSeconds = Math.floor(now / 1000) + 24 * 60 * 60;
       const incident: Incident = {
-        incident_id: ulid(),
+        incident_id: randomUUID(),
         team_id: team.team_id,
         alarm_arn: message.AlarmArn,
         alarm_name: message.AlarmName,
@@ -58,11 +57,12 @@ export async function handler(event: SNSEvent): Promise<void> {
         assigned_to: onCallUserId,
         escalation_level: 0,
         triggered_at: now,
+        ttl: ttlSeconds,
         timeline: [
           {
             timestamp: now,
             event: "triggered",
-            actor: "system",
+            actor: "CloudWatch",
             note: message.NewStateReason,
           },
         ],
@@ -75,15 +75,9 @@ export async function handler(event: SNSEvent): Promise<void> {
         })
       );
 
-      console.log(`Created incident: ${incident.incident_id}`);
+      console.log(`Created incident: ${incident.incident_id} (push handled by streams)`);
 
-      // Get user's devices and send push
-      const devices = await getUserDevices(onCallUserId);
-      for (const device of devices) {
-        await sendPushNotification(device, incident);
-      }
-
-      // TODO: Schedule escalation via EventBridge
+      // Push notifications are handled by DynamoDB Streams Lambda
     } catch (error) {
       console.error("Error processing alarm:", error);
     }
@@ -91,8 +85,6 @@ export async function handler(event: SNSEvent): Promise<void> {
 }
 
 async function findTeamByAwsAccount(accountId: string): Promise<Team | null> {
-  // Scan teams to find one with matching aws_account_ids
-  // In production, consider a GSI or caching
   const result = await docClient.send(
     new ScanCommand({
       TableName: TEAMS_TABLE,
@@ -100,7 +92,6 @@ async function findTeamByAwsAccount(accountId: string): Promise<Team | null> {
       ExpressionAttributeValues: { ":accountId": accountId },
     })
   );
-
   return (result.Items?.[0] as Team) || null;
 }
 
@@ -121,21 +112,8 @@ async function findOnCallUser(teamId: string): Promise<string | null> {
       },
     })
   );
-
   const slot = result.Items?.[0] as Schedule | undefined;
   return slot?.user_id || null;
-}
-
-async function getUserDevices(userId: string): Promise<Device[]> {
-  const result = await docClient.send(
-    new QueryCommand({
-      TableName: DEVICES_TABLE,
-      KeyConditionExpression: "user_id = :uid",
-      ExpressionAttributeValues: { ":uid": userId },
-    })
-  );
-
-  return (result.Items as Device[]) || [];
 }
 
 function determineSeverity(alarmName: string): "critical" | "warning" | "info" {
@@ -147,27 +125,4 @@ function determineSeverity(alarmName: string): "critical" | "warning" | "info" {
     return "warning";
   }
   return "info";
-}
-
-async function sendPushNotification(device: Device, incident: Incident): Promise<void> {
-  // TODO: Implement APNs push
-  // For now, just log
-  console.log(`Would send push to ${device.platform} device for incident ${incident.incident_id}`);
-
-  if (device.platform === "ios") {
-    // APNs HTTP/2 push
-    // const payload = {
-    //   aps: {
-    //     alert: {
-    //       title: `🔴 ALARM: ${incident.alarm_name}`,
-    //       body: incident.timeline[0]?.note || "Alarm triggered",
-    //     },
-    //     sound: "default",
-    //     "interruption-level": "critical",
-    //     category: "INCIDENT_ACTIONS",
-    //   },
-    //   incident_id: incident.incident_id,
-    //   severity: incident.severity,
-    // };
-  }
 }

@@ -1,6 +1,6 @@
 // Demo mode settings persistence
 
-const DEMO_SETTINGS_KEY = "riffboy-demo-settings";
+const DEMO_SETTINGS_KEY = "pipalert-demo-settings";
 
 export interface DemoSettings {
   enabled: boolean;

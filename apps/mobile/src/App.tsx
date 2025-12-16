@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "./lib/auth";
 import { setTokenGetter } from "./lib/api";
 import { NavigationProvider, useNavigation, Page } from "./lib/navigation";
 import { AudioProvider } from "./hooks/useAudio";
 import { DemoModeProvider } from "./hooks/useDemoMode";
+import { usePushNotifications } from "./hooks/usePushNotifications";
 import Layout from "./components/Layout";
 import BootScreen from "./components/BootScreen";
 import LoginPage from "./pages/LoginPage";
@@ -30,6 +31,26 @@ function PageContainer({ isVisible, children }: { page: Page; isVisible: boolean
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
   const { state, navigate } = useNavigation();
+
+  // Callback to refresh incidents when push notification received
+  const handlePushReceived = useCallback(() => {
+    window.dispatchEvent(new CustomEvent("refreshIncidents"));
+  }, []);
+
+  // Register for push notifications when authenticated
+  usePushNotifications(isAuthenticated, {
+    onPushReceived: handlePushReceived,
+    debounceMs: 500,
+  });
+
+  // Handle push notification tap navigation
+  useEffect(() => {
+    const handleNavigateToIncident = (event: CustomEvent<string>) => {
+      navigate("incident-detail", { incidentId: event.detail });
+    };
+    window.addEventListener("navigateToIncident", handleNavigateToIncident as EventListener);
+    return () => window.removeEventListener("navigateToIncident", handleNavigateToIncident as EventListener);
+  }, [navigate]);
 
   // Redirect to login if not authenticated
   useEffect(() => {

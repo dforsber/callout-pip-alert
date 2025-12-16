@@ -174,7 +174,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Authenticate with biometric
-    const authenticated = await authenticateWithBiometric("Sign in to Riff-Boy");
+    const authenticated = await authenticateWithBiometric("Sign in to Pip-Alert");
     if (!authenticated) {
       return false;
     }

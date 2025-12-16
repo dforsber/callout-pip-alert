@@ -54,13 +54,13 @@
     <line x1="70" y1="420" x2="442" y2="420" stroke="#f59e0b" stroke-width="1"/>
   </g>
 
-  <!-- RIFF-BOY Text with strong glow -->
+  <!-- PIP-ALERT Text with strong glow -->
   <g filter="url(#strongGlow)" fill="#f59e0b">
-    <!-- RIFF - Row 1 -->
-    <text x="256" y="215" font-family="monospace, 'Courier New'" font-size="115" font-weight="bold" text-anchor="middle" letter-spacing="-5">RIFF</text>
+    <!-- PIP - Row 1 -->
+    <text x="256" y="215" font-family="monospace, 'Courier New'" font-size="115" font-weight="bold" text-anchor="middle" letter-spacing="-5">PIP</text>
 
-    <!-- BOY - Row 2 -->
-    <text x="256" y="350" font-family="monospace, 'Courier New'" font-size="115" font-weight="bold" text-anchor="middle" letter-spacing="-5">BOY</text>
+    <!-- ALERT - Row 2 -->
+    <text x="256" y="350" font-family="monospace, 'Courier New'" font-size="90" font-weight="bold" text-anchor="middle" letter-spacing="-3">ALERT</text>
   </g>
 
   <!-- Decorative line between text -->

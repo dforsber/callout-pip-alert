@@ -1,12 +1,8 @@
-// Riff-Boy Audio System - Main export
+// Pip-Alert Audio System - Main export
 
 export { AudioEngine, audioEngine } from "./audioEngine";
 
-export {
-  PIPBOY_FREQUENCIES,
-  ENVELOPES,
-  type ADSREnvelope,
-} from "./synthesizer";
+export { PIPBOY_FREQUENCIES, ENVELOPES, type ADSREnvelope } from "./synthesizer";
 
 export {
   // UI Sounds

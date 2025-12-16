@@ -3,7 +3,9 @@ import { useAuth } from "../lib/auth";
 import { useNavigation } from "../lib/navigation";
 import { useAudio } from "../hooks/useAudio";
 import { useDemoMode } from "../hooks/useDemoMode";
+import { usePushNotifications } from "../hooks/usePushNotifications";
 import { startDemoSequence, stopDemoSequence, resetDemoCounter } from "../lib/demo";
+import { cloudDemoApi, devicesApi } from "../lib/api";
 import {
   CloudBackend,
   getBackends,
@@ -96,6 +98,15 @@ export default function SettingsPage() {
   // Audio settings
   const { settings: audioSettings, updateSettings, toggleCategory, setMasterVolume, playUISound, playAlert, startAmbient, stopAmbient, setAmbientIntensity } = useAudio();
   const [geigerTestRunning, setGeigerTestRunning] = useState(false);
+
+  // Cloud demo state
+  const [cloudDemoLoading, setCloudDemoLoading] = useState(false);
+  const [cloudDemoResult, setCloudDemoResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  // Push notifications
+  const { token: pushToken, isRegistered: pushRegistered, error: pushError, status: pushStatus } = usePushNotifications(isAuthenticated);
+  const [pushTestLoading, setPushTestLoading] = useState(false);
+  const [pushTestResult, setPushTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
   // Demo mode
   const {
@@ -247,6 +258,115 @@ export default function SettingsPage() {
     stopDemoSequence();
     resetDemo();
     resetDemoCounter();
+  };
+
+  const handleCloudDemoSetup = async () => {
+    playUISound("click");
+
+    // Turn off local demo mode so cloud incidents are visible
+    if (demoEnabled) {
+      setDemoEnabled(false);
+      stopDemoSequence();
+      resetDemo();
+    }
+
+    setCloudDemoLoading(true);
+    setCloudDemoResult(null);
+
+    try {
+      const result = await cloudDemoApi.setup();
+      setCloudDemoResult({
+        success: true,
+        message: `Team ready: ${result.team_id}. On-call until ${new Date(result.on_call_until).toLocaleTimeString()}`,
+      });
+      playUISound("success");
+    } catch (error) {
+      setCloudDemoResult({
+        success: false,
+        message: error instanceof Error ? error.message : "Setup failed",
+      });
+      playUISound("error");
+    } finally {
+      setCloudDemoLoading(false);
+    }
+  };
+
+  const handleCloudDemoStart = async () => {
+    playUISound("click");
+
+    // Turn off local demo mode so cloud incidents are visible
+    if (demoEnabled) {
+      setDemoEnabled(false);
+      stopDemoSequence();
+      resetDemo();
+    }
+
+    setCloudDemoLoading(true);
+    setCloudDemoResult(null);
+
+    try {
+      const result = await cloudDemoApi.start();
+      setCloudDemoResult({
+        success: true,
+        message: `Published ${result.alarm_count} alarms to SNS`,
+      });
+      playUISound("success");
+    } catch (error) {
+      setCloudDemoResult({
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to start demo",
+      });
+      playUISound("error");
+    } finally {
+      setCloudDemoLoading(false);
+    }
+  };
+
+  const handleCloudDemoReset = async () => {
+    playUISound("click");
+    setCloudDemoLoading(true);
+    setCloudDemoResult(null);
+
+    try {
+      const result = await cloudDemoApi.reset();
+      setCloudDemoResult({
+        success: true,
+        message: `Reset: ${result.deleted_incidents} incidents, ${result.deleted_schedules} schedules`,
+      });
+      playUISound("success");
+    } catch (error) {
+      setCloudDemoResult({
+        success: false,
+        message: error instanceof Error ? error.message : "Reset failed",
+      });
+      playUISound("error");
+    } finally {
+      setCloudDemoLoading(false);
+    }
+  };
+
+  const handleTestPush = async () => {
+    if (!pushToken) return;
+    playUISound("click");
+    setPushTestLoading(true);
+    setPushTestResult(null);
+
+    try {
+      await devicesApi.testPush(pushToken);
+      setPushTestResult({
+        success: true,
+        message: "Test notification sent!",
+      });
+      playUISound("success");
+    } catch (error) {
+      setPushTestResult({
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to send test",
+      });
+      playUISound("error");
+    } finally {
+      setPushTestLoading(false);
+    }
   };
 
   return (
@@ -436,13 +556,73 @@ export default function SettingsPage() {
         </div>
       )}
 
+      {/* Push Notifications */}
+      <div className="bg-zinc-800 rounded border-2 border-amber-500/30 p-4 mb-4">
+        <h2 className="text-sm font-bold text-amber-500 font-mono mb-3">{">"} PUSH NOTIFICATIONS</h2>
+
+        {/* Status indicators */}
+        <div className="space-y-2 mb-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-amber-500/70 font-mono">STATUS</span>
+            <span className={`text-xs font-mono font-bold ${
+              pushStatus === "granted" ? "text-green-500" :
+              pushStatus === "denied" || pushStatus === "error" ? "text-red-500" :
+              pushStatus === "requesting" ? "text-amber-500" :
+              "text-amber-500/50"
+            }`}>
+              {pushStatus.toUpperCase()}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-amber-500/70 font-mono">DEVICE TOKEN</span>
+            <span className={`text-xs font-mono font-bold ${pushToken ? "text-green-500" : "text-amber-500/50"}`}>
+              {pushToken ? `${pushToken.substring(0, 8)}...` : "NONE"}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-amber-500/70 font-mono">BACKEND</span>
+            <span className={`text-xs font-mono font-bold ${pushRegistered ? "text-green-500" : "text-amber-500/50"}`}>
+              {pushRegistered ? "REGISTERED" : isAuthenticated ? "NOT REGISTERED" : "SIGN IN REQUIRED"}
+            </span>
+          </div>
+        </div>
+
+        {/* Error display */}
+        {pushError && (
+          <div className="p-2 bg-red-500/10 border border-red-500/30 rounded mb-3">
+            <p className="text-xs text-red-500 font-mono">{pushError}</p>
+          </div>
+        )}
+
+        {/* Test result */}
+        {pushTestResult && (
+          <div className={`p-2 rounded mb-3 border ${pushTestResult.success ? "bg-green-500/10 border-green-500/30" : "bg-red-500/10 border-red-500/30"}`}>
+            <p className={`text-xs font-mono text-center ${pushTestResult.success ? "text-green-500" : "text-red-500"}`}>
+              {pushTestResult.message}
+            </p>
+          </div>
+        )}
+
+        {/* Test button */}
+        <button
+          onClick={handleTestPush}
+          disabled={!pushToken || !pushRegistered || pushTestLoading}
+          className="w-full py-2 bg-amber-500/20 text-amber-500 rounded border border-amber-500/50 font-mono text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-transform"
+        >
+          {pushTestLoading ? "SENDING..." : "TEST PUSH NOTIFICATION"}
+        </button>
+        {!pushToken && (
+          <p className="text-xs text-amber-500/50 font-mono text-center mt-2">ALLOW NOTIFICATIONS TO ENABLE</p>
+        )}
+      </div>
+
       {/* Audio Settings */}
       <div className="bg-zinc-800 rounded border-2 border-amber-500/30 p-4 mb-4">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-sm font-bold text-amber-500 font-mono">{">"} AUDIO</h2>
             <p className="text-xs text-amber-500/60 mt-0.5 font-mono">
-              {audioSettings.enabled ? "RIFF-BOY AUDIO ENABLED" : "AUDIO DISABLED"}
+              {audioSettings.enabled ? "PIP-ALERT AUDIO ENABLED" : "AUDIO DISABLED"}
             </p>
           </div>
           <button
@@ -570,37 +750,37 @@ export default function SettingsPage() {
               <div className="flex gap-2 flex-wrap">
                 <button
                   onClick={() => playUISound("toggle_on")}
-                  className="px-3 py-1.5 bg-zinc-900 border border-amber-500/30 rounded text-amber-500 font-mono text-sm"
+                  className="px-3 py-1.5 bg-zinc-900 border border-amber-500/30 rounded text-amber-500 font-mono text-sm active:scale-95 active:bg-amber-500/20 transition-all"
                 >
                   TOGGLE ON
                 </button>
                 <button
                   onClick={() => playUISound("toggle_off")}
-                  className="px-3 py-1.5 bg-zinc-900 border border-amber-500/30 rounded text-amber-500 font-mono text-sm"
+                  className="px-3 py-1.5 bg-zinc-900 border border-amber-500/30 rounded text-amber-500 font-mono text-sm active:scale-95 active:bg-amber-500/20 transition-all"
                 >
                   TOGGLE OFF
                 </button>
                 <button
                   onClick={() => playUISound("success")}
-                  className="px-3 py-1.5 bg-zinc-900 border border-green-500/30 rounded text-green-500 font-mono text-sm"
+                  className="px-3 py-1.5 bg-zinc-900 border border-green-500/30 rounded text-green-500 font-mono text-sm active:scale-95 active:bg-green-500/20 transition-all"
                 >
                   SUCCESS
                 </button>
                 <button
                   onClick={() => playUISound("error")}
-                  className="px-3 py-1.5 bg-zinc-900 border border-red-500/30 rounded text-red-500 font-mono text-sm"
+                  className="px-3 py-1.5 bg-zinc-900 border border-red-500/30 rounded text-red-500 font-mono text-sm active:scale-95 active:bg-red-500/20 transition-all"
                 >
                   ERROR
                 </button>
                 <button
                   onClick={() => playAlert("critical")}
-                  className="px-3 py-1.5 bg-red-500/20 border border-red-500/50 rounded text-red-500 font-mono text-sm"
+                  className="px-3 py-1.5 bg-red-500/20 border border-red-500/50 rounded text-red-500 font-mono text-sm active:scale-95 active:bg-red-500/40 transition-all"
                 >
                   CRITICAL ALARM
                 </button>
                 <button
                   onClick={() => playAlert("warning")}
-                  className="px-3 py-1.5 bg-amber-500/20 border border-amber-500/50 rounded text-amber-500 font-mono text-sm"
+                  className="px-3 py-1.5 bg-amber-500/20 border border-amber-500/50 rounded text-amber-500 font-mono text-sm active:scale-95 active:bg-amber-500/40 transition-all"
                 >
                   WARNING
                 </button>
@@ -675,79 +855,133 @@ export default function SettingsPage() {
 
       {/* Demo Mode */}
       <div className="bg-zinc-800 rounded border-2 border-amber-500/30 p-4 mb-4">
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <h2 className="text-sm font-bold text-amber-500 font-mono">{">"} DEMO MODE</h2>
-            <p className="text-xs text-amber-500/60 mt-0.5 font-mono">
-              {demoEnabled ? (demoRunning ? "DEMO RUNNING" : "DEMO DATA ACTIVE") : "SHOWCASE FEATURES"}
-            </p>
-          </div>
-          <button
-            onClick={handleDemoToggle}
-            className={`relative w-12 h-7 rounded-full transition-colors border-2 ${
-              demoEnabled ? "bg-amber-500/20 border-amber-500" : "bg-zinc-900 border-amber-500/30"
-            }`}
-          >
-            <span
-              className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform ${
-                demoEnabled ? "translate-x-5 bg-amber-500" : "bg-amber-500/50"
-              }`}
-            />
-          </button>
-        </div>
+        <h2 className="text-sm font-bold text-amber-500 font-mono mb-3">{">"} DEMO MODE</h2>
 
-        {demoEnabled && (
-          <>
-            {/* Warning box */}
-            <div className="p-2 bg-amber-500/10 border border-amber-500/30 rounded mb-3">
-              <p className="text-xs text-amber-500/80 font-mono text-center">
-                ⚠ DEMO DATA ONLY — NOT CONNECTED TO REAL BACKEND
+        {/* Local Demo Section */}
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <h3 className="text-xs font-bold text-amber-500/80 font-mono">LOCAL DEMO</h3>
+              <p className="text-xs text-amber-500/50 mt-0.5 font-mono">
+                {demoEnabled ? (demoRunning ? "DEMO RUNNING" : "CLIENT-SIDE ACTIVE") : "CLIENT-SIDE ONLY"}
               </p>
             </div>
+            <button
+              onClick={handleDemoToggle}
+              className={`relative w-12 h-7 rounded-full transition-colors border-2 ${
+                demoEnabled ? "bg-amber-500/20 border-amber-500" : "bg-zinc-900 border-amber-500/30"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform ${
+                  demoEnabled ? "translate-x-5 bg-amber-500" : "bg-amber-500/50"
+                }`}
+              />
+            </button>
+          </div>
 
-            {/* Demo status */}
-            {demoIncidents.length > 0 && (
-              <div className="p-2 bg-zinc-900 border border-amber-500/20 rounded mb-3">
-                <div className="flex justify-between text-xs font-mono">
-                  <span className="text-red-500">
-                    UNACKED: {demoIncidents.filter(i => i.state === "triggered").length}
-                  </span>
-                  <span className="text-amber-500">
-                    ACKED: {demoIncidents.filter(i => i.state === "acked").length}
-                  </span>
-                  <span className="text-green-500">
-                    RESOLVED: {demoIncidents.filter(i => i.state === "resolved").length}
-                  </span>
-                </div>
+          {demoEnabled && (
+            <>
+              {/* Warning box */}
+              <div className="p-2 bg-amber-500/10 border border-amber-500/30 rounded mb-3">
+                <p className="text-xs text-amber-500/80 font-mono text-center">
+                  LOCAL DEMO — NOT CONNECTED TO BACKEND
+                </p>
               </div>
-            )}
 
-            {/* Demo controls */}
-            <div className="flex gap-2">
-              {!demoRunning ? (
-                <button
-                  onClick={handleStartDemo}
-                  className="flex-1 py-2 bg-amber-500/20 text-amber-500 rounded border border-amber-500/50 font-mono text-sm font-bold"
-                >
-                  START DEMO
-                </button>
-              ) : (
-                <button
-                  onClick={handleStopDemo}
-                  className="flex-1 py-2 bg-red-500/20 text-red-500 rounded border border-red-500/50 font-mono text-sm font-bold"
-                >
-                  STOP DEMO
-                </button>
+              {/* Demo status */}
+              {demoIncidents.length > 0 && (
+                <div className="p-2 bg-zinc-900 border border-amber-500/20 rounded mb-3">
+                  <div className="flex justify-between text-xs font-mono">
+                    <span className="text-red-500">
+                      UNACKED: {demoIncidents.filter(i => i.state === "triggered").length}
+                    </span>
+                    <span className="text-amber-500">
+                      ACKED: {demoIncidents.filter(i => i.state === "acked").length}
+                    </span>
+                    <span className="text-green-500">
+                      RESOLVED: {demoIncidents.filter(i => i.state === "resolved").length}
+                    </span>
+                  </div>
+                </div>
               )}
-              <button
-                onClick={handleResetDemo}
-                className="flex-1 py-2 bg-zinc-900 text-amber-500/70 rounded border border-amber-500/30 font-mono text-sm font-bold"
-              >
-                RESET DEMO
-              </button>
+
+              {/* Demo controls */}
+              <div className="flex gap-2">
+                {!demoRunning ? (
+                  <button
+                    onClick={handleStartDemo}
+                    className="flex-1 py-2 bg-amber-500/20 text-amber-500 rounded border border-amber-500/50 font-mono text-sm font-bold"
+                  >
+                    START
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleStopDemo}
+                    className="flex-1 py-2 bg-red-500/20 text-red-500 rounded border border-red-500/50 font-mono text-sm font-bold"
+                  >
+                    STOP
+                  </button>
+                )}
+                <button
+                  onClick={handleResetDemo}
+                  className="flex-1 py-2 bg-zinc-900 text-amber-500/70 rounded border border-amber-500/30 font-mono text-sm font-bold"
+                >
+                  RESET
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Divider */}
+        <div className="border-t border-amber-500/20 my-4" />
+
+        {/* Cloud Demo Section */}
+        <div>
+          <div className="mb-2">
+            <h3 className="text-xs font-bold text-amber-500/80 font-mono">CLOUD DEMO (E2E)</h3>
+            <p className="text-xs text-amber-500/50 mt-0.5 font-mono">SNS → LAMBDA → DYNAMODB</p>
+          </div>
+          <div className="p-2 bg-green-500/10 border border-green-500/30 rounded mb-3">
+            <p className="text-xs text-green-500/80 font-mono text-center">
+              FULL E2E: ALARMS → SNS → INCIDENTS
+            </p>
+          </div>
+          {cloudDemoResult && (
+            <div className={`p-2 rounded mb-3 border ${cloudDemoResult.success ? "bg-green-500/10 border-green-500/30" : "bg-red-500/10 border-red-500/30"}`}>
+              <p className={`text-xs font-mono text-center ${cloudDemoResult.success ? "text-green-500" : "text-red-500"}`}>
+                {cloudDemoResult.message}
+              </p>
             </div>
-          </>
-        )}
+          )}
+          <div className="flex gap-2">
+            <button
+              onClick={handleCloudDemoSetup}
+              disabled={!isAuthenticated || cloudDemoLoading}
+              className="flex-1 py-2 bg-amber-500/20 text-amber-500 rounded border border-amber-500/50 font-mono text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-transform"
+            >
+              {cloudDemoLoading ? "..." : "1. SETUP"}
+            </button>
+            <button
+              onClick={handleCloudDemoStart}
+              disabled={!isAuthenticated || cloudDemoLoading}
+              className="flex-1 py-2 bg-green-500/20 text-green-500 rounded border border-green-500/50 font-mono text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-transform"
+            >
+              {cloudDemoLoading ? "..." : "2. START"}
+            </button>
+            <button
+              onClick={handleCloudDemoReset}
+              disabled={!isAuthenticated || cloudDemoLoading}
+              className="flex-1 py-2 bg-red-500/20 text-red-500 rounded border border-red-500/50 font-mono text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-transform"
+            >
+              {cloudDemoLoading ? "..." : "3. RESET"}
+            </button>
+          </div>
+          {!isAuthenticated && (
+            <p className="text-xs text-amber-500/50 font-mono text-center mt-2">SIGN IN TO USE</p>
+          )}
+        </div>
       </div>
 
       {/* User info */}
@@ -761,7 +995,7 @@ export default function SettingsPage() {
       {/* App info */}
       <div className="bg-zinc-800 rounded border-2 border-amber-500/30 p-4 mb-4">
         <h2 className="text-sm font-bold text-amber-500/70 font-mono mb-2">{">"} SYSTEM INFO</h2>
-        <p className="text-amber-500 font-mono">RIFF-BOY v0.1.0</p>
+        <p className="text-amber-500 font-mono">PIP-ALERT v0.1.0</p>
       </div>
 
       {/* Sign out or Go to Login */}

@@ -1,6 +1,6 @@
 // Audio Settings persistence - follows backends.ts localStorage pattern
 
-const AUDIO_SETTINGS_KEY = "riffboy-audio-settings";
+const AUDIO_SETTINGS_KEY = "pipalert-audio-settings";
 
 export interface AudioSettings {
   enabled: boolean;

@@ -7,6 +7,9 @@ import { useAudio } from "../hooks/useAudio";
 import { useCriticalAlertDetection } from "../hooks/useCriticalAlertDetection";
 import { useDemoMode } from "../hooks/useDemoMode";
 
+// How long resolved incidents stay visible in ALARMS tab (ms)
+const RESOLVED_VISIBILITY_DURATION = 5000;
+
 type IncidentState = "triggered" | "acked" | "resolved";
 type Severity = "critical" | "warning" | "info";
 
@@ -82,6 +85,10 @@ export default function IncidentsPage() {
   const { playAlert, playUISound, settings, startAmbient, stopAmbient, setAmbientIntensity, isInitialized } = useAudio();
   const { isEnabled: demoEnabled, isRunning: demoRunning } = useDemoMode();
 
+  // Track recently resolved incidents to keep them visible in ALARMS tab
+  const [recentlyResolved, setRecentlyResolved] = useState<Map<string, number>>(new Map());
+  const prevIncidentsRef = useRef<Incident[]>([]);
+
   const currentTab = FILTER_TABS.find(t => t.key === activeTab)!;
 
   // Fetch all incidents and filter client-side for tabs with multiple states
@@ -90,6 +97,16 @@ export default function IncidentsPage() {
     queryFn: () => incidentsApi.list(),
     refetchInterval: 5000, // Refresh every 5 seconds
   });
+
+  // Listen for push-triggered refresh events
+  useEffect(() => {
+    const handlePushRefresh = () => {
+      console.log("[Incidents] Push-triggered refresh");
+      refetch();
+    };
+    window.addEventListener("refreshIncidents", handlePushRefresh);
+    return () => window.removeEventListener("refreshIncidents", handlePushRefresh);
+  }, [refetch]);
 
   // Pre-fetch all incident details when list loads
   useEffect(() => {
@@ -105,6 +122,59 @@ export default function IncidentsPage() {
     }
   }, [data?.incidents, queryClient]);
 
+  // Detect newly resolved incidents and add to visibility delay list
+  useEffect(() => {
+    if (!data?.incidents) return;
+
+    const currentIncidents: Incident[] = data.incidents;
+    const prevIncidents = prevIncidentsRef.current;
+
+    // Find incidents that just became resolved (were acked before, now resolved)
+    const newlyResolved = currentIncidents.filter((curr) => {
+      if (curr.state !== "resolved") return false;
+      const prev = prevIncidents.find((p) => p.incident_id === curr.incident_id);
+      // Was either acked or triggered before, now resolved
+      return prev && prev.state !== "resolved";
+    });
+
+    if (newlyResolved.length > 0) {
+      const now = Date.now();
+      setRecentlyResolved((prev) => {
+        const next = new Map(prev);
+        newlyResolved.forEach((inc) => {
+          if (!next.has(inc.incident_id)) {
+            next.set(inc.incident_id, now);
+          }
+        });
+        return next;
+      });
+    }
+
+    prevIncidentsRef.current = currentIncidents;
+  }, [data?.incidents]);
+
+  // Clean up expired recently resolved incidents
+  useEffect(() => {
+    if (recentlyResolved.size === 0) return;
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setRecentlyResolved((prev) => {
+        const next = new Map(prev);
+        let changed = false;
+        for (const [id, timestamp] of prev) {
+          if (now - timestamp > RESOLVED_VISIBILITY_DURATION) {
+            next.delete(id);
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, [recentlyResolved.size]);
+
   // Handle new critical incident alert
   const handleNewCritical = useCallback((incident: Incident) => {
     playAlert("critical");
@@ -118,16 +188,25 @@ export default function IncidentsPage() {
   });
 
   // Filter by active tab's states, then sort by severity and time
+  // Include recently resolved incidents in ALARMS tab for visibility delay
   const incidents = useMemo(() => {
     const items: Incident[] = data?.incidents || [];
     return items
-      .filter((i) => currentTab.states.includes(i.state))
+      .filter((i) => {
+        // Standard filter by tab states
+        if (currentTab.states.includes(i.state)) return true;
+        // For ALARMS tab, also include recently resolved incidents
+        if (currentTab.key === "alarms" && i.state === "resolved" && recentlyResolved.has(i.incident_id)) {
+          return true;
+        }
+        return false;
+      })
       .sort((a, b) => {
         const severityDiff = severityOrder[a.severity] - severityOrder[b.severity];
         if (severityDiff !== 0) return severityDiff;
         return b.triggered_at - a.triggered_at;
       });
-  }, [data?.incidents, currentTab.states]);
+  }, [data?.incidents, currentTab.states, currentTab.key, recentlyResolved]);
 
   // Count unacked critical for badge (from all data, not filtered)
   const unackedCriticalCount = useMemo(() => {
@@ -287,6 +366,7 @@ export default function IncidentsPage() {
             <IncidentCard
               key={incident.incident_id}
               incident={incident}
+              isFadingOut={recentlyResolved.has(incident.incident_id)}
               onClick={() => {
                 playUISound("click");
                 navigate("incident-detail", { incidentId: incident.incident_id });
@@ -329,9 +409,11 @@ export default function IncidentsPage() {
 
 function IncidentCard({
   incident,
+  isFadingOut,
   onClick
 }: {
   incident: Incident;
+  isFadingOut?: boolean;
   onClick: () => void;
 }) {
   const config = severityConfig[incident.severity];
@@ -349,11 +431,11 @@ function IncidentCard({
       layout="position"
       layoutId={incident.incident_id}
       initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
+      animate={{ opacity: isFadingOut ? 0.4 : 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.15, layout: { duration: 0.15 } }}
+      transition={{ duration: isFadingOut ? 0.8 : 0.15, layout: { duration: 0.15 } }}
       onClick={onClick}
-      className={`${cardClasses} rounded border-l-4 ${config.border} cursor-pointer active:bg-zinc-700 overflow-hidden border border-amber-500/20 ${isCriticalTriggered ? "pulse-glow-red" : ""}`}
+      className={`${cardClasses} rounded border-l-4 ${config.border} cursor-pointer active:scale-[0.98] active:brightness-90 transition-transform overflow-hidden border border-amber-500/20 ${isCriticalTriggered ? "pulse-glow-red" : ""} ${isFadingOut ? "border-green-500/30" : ""}`}
     >
       <div className="p-3">
         {/* Top row: severity indicator + time + ack badge */}
@@ -372,13 +454,13 @@ function IncidentCard({
                 {incident.acked_by || incident.assigned_to || "ACK"}
               </span>
             )}
-            {/* Resolved badge */}
+            {/* Resolved badge - show "RESOLVED" when fading out in ALARMS tab */}
             {isResolved && (
-              <span className="flex items-center gap-1 text-xs font-mono text-green-500/70 bg-green-500/10 px-1.5 py-0.5 rounded border border-green-500/30">
+              <span className={`flex items-center gap-1 text-xs font-mono px-1.5 py-0.5 rounded border ${isFadingOut ? "text-green-500 bg-green-500/20 border-green-500/50 animate-pulse" : "text-green-500/70 bg-green-500/10 border-green-500/30"}`}>
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
-                OK
+                {isFadingOut ? "RESOLVED" : "OK"}
               </span>
             )}
           </div>

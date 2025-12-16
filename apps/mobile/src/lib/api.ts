@@ -36,13 +36,18 @@ async function fetchWithAuth(path: string, options: RequestInit = {}) {
 
 // Devices
 export const devicesApi = {
-  register: (token: string, platform: string) =>
+  register: (token: string, platform: string, sandbox = false) =>
     fetchWithAuth("/devices", {
       method: "POST",
-      body: JSON.stringify({ token, platform }),
+      body: JSON.stringify({ token, platform, sandbox }),
     }),
   unregister: (token: string) =>
     fetchWithAuth(`/devices/${encodeURIComponent(token)}`, { method: "DELETE" }),
+  testPush: (token: string) =>
+    fetchWithAuth("/devices/test-push", {
+      method: "POST",
+      body: JSON.stringify({ token }),
+    }),
 };
 
 // Incidents - intercepts demo mode
@@ -56,9 +61,12 @@ export const incidentsApi = {
     if (isDemoMode()) return demoIncidentsApi.get(id);
     return fetchWithAuth(`/incidents/${id}`);
   },
-  ack: (id: string) => {
+  ack: (id: string, ackedByName?: string) => {
     if (isDemoMode()) return demoIncidentsApi.ack(id);
-    return fetchWithAuth(`/incidents/${id}/ack`, { method: "POST" });
+    return fetchWithAuth(`/incidents/${id}/ack`, {
+      method: "POST",
+      body: JSON.stringify({ acked_by_name: ackedByName }),
+    });
   },
   unack: (id: string) => {
     if (isDemoMode()) return demoIncidentsApi.unack(id);
@@ -114,4 +122,25 @@ export const schedulesApi = {
     }),
   delete: (teamId: string, slotId: string) =>
     fetchWithAuth(`/schedules/${teamId}/${slotId}`, { method: "DELETE" }),
+};
+
+// Cloud Demo API (triggers real backend incidents)
+export const cloudDemoApi = {
+  // Setup creates default team and makes current user on-call
+  setup: (awsAccountId?: string) =>
+    fetchWithAuth("/demo/setup", {
+      method: "POST",
+      body: JSON.stringify({ aws_account_id: awsAccountId }),
+    }),
+  // Start publishes demo alarms to SNS for e2e processing
+  start: (awsAccountId?: string) =>
+    fetchWithAuth("/demo/start", {
+      method: "POST",
+      body: JSON.stringify({ aws_account_id: awsAccountId }),
+    }),
+  // Reset cleans up all demo data (incidents, schedules, team)
+  reset: () =>
+    fetchWithAuth("/demo/reset", {
+      method: "POST",
+    }),
 };

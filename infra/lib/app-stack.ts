@@ -5,6 +5,7 @@ import * as apigateway from "aws-cdk-lib/aws-apigatewayv2";
 import * as apigatewayAuthorizers from "aws-cdk-lib/aws-apigatewayv2-authorizers";
 import * as apigatewayIntegrations from "aws-cdk-lib/aws-apigatewayv2-integrations";
 import * as lambda from "aws-cdk-lib/aws-lambda";
+import * as lambdaEventSources from "aws-cdk-lib/aws-lambda-event-sources";
 import * as nodejs from "aws-cdk-lib/aws-lambda-nodejs";
 import * as sns from "aws-cdk-lib/aws-sns";
 import * as snsSubscriptions from "aws-cdk-lib/aws-sns-subscriptions";
@@ -20,6 +21,8 @@ const bundlingOptions: nodejs.BundlingOptions = {
   format: nodejs.OutputFormat.ESM,
   mainFields: ["module", "main"],
   esbuildArgs: { "--bundle": true },
+  // Add require shim for CommonJS modules (jsonwebtoken uses require("buffer"))
+  banner: "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
 };
 
 export class AppStack extends cdk.Stack {
@@ -83,6 +86,8 @@ export class AppStack extends cdk.Stack {
       partitionKey: { name: "incident_id", type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
+      timeToLiveAttribute: "ttl", // Auto-delete incidents after 24h
+      stream: dynamodb.StreamViewType.NEW_AND_OLD_IMAGES, // Enable streams for push notifications
     });
 
     // GSI for querying incidents by team and state
@@ -134,6 +139,7 @@ export class AppStack extends cdk.Stack {
       bundling: bundlingOptions,
     });
     devicesTable.grantReadWriteData(devicesHandler);
+    apnsSecret.grantRead(devicesHandler);
 
     // Incidents handler
     const incidentsHandler = new nodejs.NodejsFunction(this, "IncidentsHandler", {
@@ -174,12 +180,52 @@ export class AppStack extends cdk.Stack {
     schedulesTable.grantReadWriteData(schedulesHandler);
     teamsTable.grantReadData(schedulesHandler);
 
-    // Alarm handler (SNS triggered)
+    // Alarm handler (SNS triggered) - writes to DynamoDB only
     const alarmHandler = new nodejs.NodejsFunction(this, "AlarmHandler", {
       functionName: "cw-alarms-alarm-handler",
       runtime: lambda.Runtime.NODEJS_22_X,
       handler: "handler",
       entry: path.join(functionsPath, "handlers/alarm-handler.ts"),
+      environment: commonEnv,
+      timeout: cdk.Duration.seconds(30),
+      bundling: bundlingOptions,
+    });
+    incidentsTable.grantReadWriteData(alarmHandler);
+    teamsTable.grantReadData(alarmHandler);
+    schedulesTable.grantReadData(alarmHandler);
+    alarmsTopic.addSubscription(new snsSubscriptions.LambdaSubscription(alarmHandler));
+
+    // Incident streams handler - sends ALL push notifications
+    const incidentStreamsHandler = new nodejs.NodejsFunction(this, "IncidentStreamsHandler", {
+      functionName: "cw-alarms-incident-streams",
+      runtime: lambda.Runtime.NODEJS_22_X,
+      handler: "handler",
+      entry: path.join(functionsPath, "handlers/incident-streams.ts"),
+      environment: {
+        DEVICES_TABLE: devicesTable.tableName,
+        APNS_SECRET_ARN: apnsSecret.secretArn,
+      },
+      timeout: cdk.Duration.seconds(30),
+      bundling: bundlingOptions,
+    });
+    devicesTable.grantReadData(incidentStreamsHandler);
+    apnsSecret.grantRead(incidentStreamsHandler);
+
+    // Connect streams to Lambda
+    incidentStreamsHandler.addEventSource(
+      new lambdaEventSources.DynamoEventSource(incidentsTable, {
+        startingPosition: lambda.StartingPosition.LATEST,
+        batchSize: 10,
+        retryAttempts: 3,
+      })
+    );
+
+    // Demo handler (for cloud demo mode)
+    const demoHandler = new nodejs.NodejsFunction(this, "DemoHandler", {
+      functionName: "cw-alarms-demo",
+      runtime: lambda.Runtime.NODEJS_22_X,
+      handler: "handler",
+      entry: path.join(functionsPath, "handlers/demo.ts"),
       environment: {
         ...commonEnv,
         ALARMS_TOPIC_ARN: alarmsTopic.topicArn,
@@ -187,12 +233,10 @@ export class AppStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(30),
       bundling: bundlingOptions,
     });
-    incidentsTable.grantReadWriteData(alarmHandler);
-    teamsTable.grantReadData(alarmHandler);
-    schedulesTable.grantReadData(alarmHandler);
-    devicesTable.grantReadData(alarmHandler);
-    apnsSecret.grantRead(alarmHandler);
-    alarmsTopic.addSubscription(new snsSubscriptions.LambdaSubscription(alarmHandler));
+    incidentsTable.grantReadWriteData(demoHandler);
+    teamsTable.grantReadWriteData(demoHandler);
+    schedulesTable.grantReadWriteData(demoHandler);
+    alarmsTopic.grantPublish(demoHandler);
 
     // ==================== API GATEWAY ====================
     const httpApi = new apigateway.HttpApi(this, "HttpApi", {
@@ -231,6 +275,12 @@ export class AppStack extends cdk.Stack {
       integration: new apigatewayIntegrations.HttpLambdaIntegration("DevicesDelete", devicesHandler),
       authorizer,
     });
+    httpApi.addRoutes({
+      path: "/devices/test-push",
+      methods: [apigateway.HttpMethod.POST],
+      integration: new apigatewayIntegrations.HttpLambdaIntegration("DevicesTestPush", devicesHandler),
+      authorizer,
+    });
 
     // Incidents routes
     httpApi.addRoutes({
@@ -249,6 +299,12 @@ export class AppStack extends cdk.Stack {
       path: "/incidents/{id}/ack",
       methods: [apigateway.HttpMethod.POST],
       integration: new apigatewayIntegrations.HttpLambdaIntegration("IncidentsAck", incidentsHandler),
+      authorizer,
+    });
+    httpApi.addRoutes({
+      path: "/incidents/{id}/unack",
+      methods: [apigateway.HttpMethod.POST],
+      integration: new apigatewayIntegrations.HttpLambdaIntegration("IncidentsUnack", incidentsHandler),
       authorizer,
     });
     httpApi.addRoutes({
@@ -307,6 +363,26 @@ export class AppStack extends cdk.Stack {
       path: "/schedules/{team_id}/{slot_id}",
       methods: [apigateway.HttpMethod.DELETE],
       integration: new apigatewayIntegrations.HttpLambdaIntegration("SchedulesDelete", schedulesHandler),
+      authorizer,
+    });
+
+    // Demo routes
+    httpApi.addRoutes({
+      path: "/demo/start",
+      methods: [apigateway.HttpMethod.POST],
+      integration: new apigatewayIntegrations.HttpLambdaIntegration("DemoStart", demoHandler),
+      authorizer,
+    });
+    httpApi.addRoutes({
+      path: "/demo/setup",
+      methods: [apigateway.HttpMethod.POST],
+      integration: new apigatewayIntegrations.HttpLambdaIntegration("DemoSetup", demoHandler),
+      authorizer,
+    });
+    httpApi.addRoutes({
+      path: "/demo/reset",
+      methods: [apigateway.HttpMethod.POST],
+      integration: new apigatewayIntegrations.HttpLambdaIntegration("DemoReset", demoHandler),
       authorizer,
     });
 
