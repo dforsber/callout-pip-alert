@@ -1,12 +1,12 @@
-# CALLOUT PIP-ALERT
+# Callout Fault-Tec
 
 ```
-██████╗ ██╗███████╗███████╗    ██████╗  ██████╗ ██╗   ██╗
-██╔══██╗██║██╔════╝██╔════╝    ██╔══██╗██╔═══██╗╚██╗ ██╔╝
-██████╔╝██║█████╗  █████╗█████╗██████╔╝██║   ██║ ╚████╔╝
-██╔══██╗██║██╔══╝  ██╔══╝╚════╝██╔══██╗██║   ██║  ╚██╔╝
-██║  ██║██║██║     ██║         ██████╔╝╚██████╔╝   ██║
-╚═╝  ╚═╝╚═╝╚═╝     ╚═╝         ╚═════╝  ╚═════╝    ╚═╝
+██████╗ ██╗██████╗        █████╗ ██╗     ███████╗██████╗ ████████╗
+██╔══██╗██║██╔══██╗      ██╔══██╗██║     ██╔════╝██╔══██╗╚══██╔══╝
+██████╔╝██║██████╔╝█████╗███████║██║     █████╗  ██████╔╝   ██║
+██╔═══╝ ██║██╔═══╝ ╚════╝██╔══██║██║     ██╔══╝  ██╔══██╗   ██║
+██║     ██║██║           ██║  ██║███████╗███████╗██║  ██║   ██║
+╚═╝     ╚═╝╚═╝           ╚═╝  ╚═╝╚══════╝╚══════╝╚═╝  ╚═╝   ╚═╝
 
 > FAULT-TEC APPROVED INCIDENT RESPONSE SYSTEM
 ```
@@ -20,11 +20,17 @@ Mobile incident management app for AWS CloudWatch alarms. Like PagerDuty/OpsGeni
 
 ## Features
 
-- View, acknowledge, and resolve incidents
-- Multi-backend configuration (switch between AWS environments)
-- Biometric authentication (Face ID / Touch ID)
+- View and acknowledge incidents
+- Multi-backend configuration, deploy your own AWS environments
 - CRT visual effects (scanlines, glow, vignette)
 - Pull-to-refresh, swipe navigation
+- Push notifications
+- Game mode
+
+## TODO
+
+- [_] On-call schedules
+- [_] Teams
 
 ## Development
 

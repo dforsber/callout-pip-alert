@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - Callout Fault-Tec Pip-Alarm</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+        h1 { color: #1a1a1a; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        h2 { color: #2a2a2a; margin-top: 30px; }
+        .last-updated { color: #666; font-style: italic; }
+        a { color: #0066cc; }
+    </style>
+</head>
+<body>
+    <h1>Privacy Policy for Callout Fault-Tec Pip-Alarm</h1>
+    <p class="last-updated">Last updated: December 18, 2024</p>
+
+    <p>Dan Forsberg ("I", "my", or "me") develops and maintains the <strong>Callout Fault-Tec Pip-Alarm</strong> mobile application (the "App"). This Privacy Policy explains how information is collected, used, and protected when you use the App.</p>
+
+    <h2>Open Source</h2>
+    <p>The App and its backend infrastructure are open source. You can review the source code, including the AWS infrastructure-as-code (IaC), at: <a href="https://github.com/dforsber/callout-pip-alert">https://github.com/dforsber/callout-pip-alert</a></p>
+
+    <h2>Self-Hosted Architecture</h2>
+    <p>The App is designed to connect to <strong>self-hosted backend infrastructure</strong> that you deploy and control in your own AWS account. When using a self-hosted backend:</p>
+    <ul>
+        <li>All user account data remains in your own AWS infrastructure</li>
+        <li>Authentication is handled by your own AWS Cognito instance</li>
+        <li>I do not have access to your data or credentials</li>
+        <li>You are responsible for the security and privacy of your own deployment</li>
+    </ul>
+    <p>The App allows you to configure your own backend endpoints in the settings, giving you full control over where your data is stored and processed.</p>
+
+    <h2>Demo Backend</h2>
+    <p>I provide a demo backend for evaluation and testing purposes. If you use the demo backend:</p>
+    <ul>
+        <li><strong>Account Information:</strong> Your email address is collected for authentication and account verification</li>
+        <li><strong>Authentication Data:</strong> Your email and encrypted password are stored in the demo AWS Cognito instance</li>
+        <li><strong>Device Token:</strong> Your Apple Push Notification service (APNs) device token is collected and stored to enable push notifications for incident alerts</li>
+    </ul>
+    <p>The demo backend is intended for evaluation only. For production use, deploying your own backend infrastructure is recommended.</p>
+
+    <h2>How Demo Backend Information Is Used</h2>
+    <p>For users of the demo backend, the information is used to:</p>
+    <ul>
+        <li>Create and manage your demo user account</li>
+        <li>Authenticate you when you log in to the App</li>
+        <li>Send account verification and password reset emails</li>
+        <li>Deliver push notifications for incident alerts to your device</li>
+        <li>Provide the demo service functionality</li>
+    </ul>
+
+    <h2>Data Storage and Security</h2>
+    <p><strong>Self-hosted users:</strong> Your data is stored in your own AWS infrastructure under your control and security policies.</p>
+    <p><strong>Demo backend users:</strong> Account information and device tokens are stored using AWS services. Appropriate technical and organizational measures are implemented to protect your personal data.</p>
+
+    <h2>Data Retention</h2>
+    <p><strong>Self-hosted users:</strong> Data retention is managed by you in your own infrastructure.</p>
+    <p><strong>Demo backend users:</strong> Account information is retained for as long as your demo account is active. Contact me to request account deletion.</p>
+
+    <h2>Third-Party Services</h2>
+    <p>The App integrates with the following services:</p>
+    <ul>
+        <li><strong>AWS Services:</strong> The backend infrastructure (whether self-hosted or the demo backend) uses AWS services including Cognito for authentication. AWS services are subject to the <a href="https://aws.amazon.com/privacy/">AWS Privacy Policy</a>.</li>
+        <li><strong>Apple Push Notification Service (APNs):</strong> To deliver push notifications to your device. This service is operated by Apple Inc.</li>
+    </ul>
+
+    <h2>Your Rights</h2>
+    <p><strong>Self-hosted users:</strong> You have full control over your data in your own infrastructure.</p>
+    <p><strong>Demo backend users:</strong> You have the right to:</p>
+    <ul>
+        <li>Access the personal data held about you</li>
+        <li>Request correction of inaccurate data</li>
+        <li>Request deletion of your demo account and associated data</li>
+        <li>Withdraw consent for data processing</li>
+    </ul>
+
+    <h2>Children's Privacy</h2>
+    <p>The App is not intended for children under the age of 13. Personal information is not knowingly collected from children under 13.</p>
+
+    <h2>Changes to This Privacy Policy</h2>
+    <p>This Privacy Policy may be updated from time to time. Changes will be posted on this page with an updated "Last updated" date.</p>
+
+    <h2>Contact</h2>
+    <p>If you have any questions about this Privacy Policy or data practices, please contact:</p>
+    <p>
+        <strong>Dan Forsberg</strong><br>
+        Email: <a href="mailto:dan.forsberg@boilingdata.com">dan.forsberg@boilingdata.com</a><br>
+        Website: <a href="https://www.boilingdata.com">www.boilingdata.com</a>
+    </p>
+
+    <hr>
+    <p style="color: #666; font-size: 0.9em;">&copy; 2024 Dan Forsberg. All rights reserved.</p>
+</body>
+</html>
