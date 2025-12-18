@@ -13,6 +13,8 @@
 
 Mobile incident management app for AWS CloudWatch alarms through SNS with Fallout Pip-Boy aesthetics (directly or through EventBridge forwards).
 
+[![Watch the demo](https://img.youtube.com/vi/dR2mUeVCI5k/0.jpg)](https://youtube.com/shorts/dR2mUeVCI5k)
+
 ## Stack
 
 - **Mobile**: Tauri v2 + React + TypeScript + Tailwind CSS v4
@@ -23,8 +25,7 @@ Mobile incident management app for AWS CloudWatch alarms through SNS with Fallou
 - View and acknowledge incidents (alarms must resolve themselves)
 - Multi-backend configuration, deploy into your own AWS environments
 - CRT visual effects (scanlines, glow, vignette)
-- Pull-to-refresh, swipe navigation
-- Push notifications
+- Pull-to-refresh (or via push notifications), swipe navigation
 - Local demo, cloud demo, and Game modes
 
 ## RoadMap
