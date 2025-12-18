@@ -13,7 +13,11 @@
 
 Mobile incident management app for AWS CloudWatch alarms through SNS with Fallout Pip-Boy aesthetics (directly or through EventBridge forwards).
 
-[![Watch the demo](https://img.youtube.com/vi/dR2mUeVCI5k/0.jpg)](https://youtube.com/shorts/dR2mUeVCI5k)
+<p align="center">
+  <a href="https://youtube.com/shorts/dR2mUeVCI5k">
+    <img src="https://img.youtube.com/vi/dR2mUeVCI5k/0.jpg" alt="Watch the demo">
+  </a>
+</p>
 
 ## Stack
 
