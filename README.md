@@ -20,17 +20,31 @@ Mobile incident management app for AWS CloudWatch alarms. Like PagerDuty/OpsGeni
 
 ## Features
 
-- View and acknowledge incidents
-- Multi-backend configuration, deploy your own AWS environments
+- View and acknowledge incidents (alarms must resolve themselves)
+- Multi-backend configuration, deploy into your own AWS environments
 - CRT visual effects (scanlines, glow, vignette)
 - Pull-to-refresh, swipe navigation
 - Push notifications
-- Game mode
+- Local demo, cloud demo, and Game modes
 
-## TODO
+## RoadMap
 
+See also [CHANGELOG.md](CHANGELOG.md)
+
+- [x] Apple iOS TestFlight public link: https://testflight.apple.com/join/qZp5J4QR
+
+### v0.2.0
+
+- [_] Cloud backend selection
+- [_] Apple Store publication
+
+### vX.Y.Z
+
+- [_] Android Marketplace
 - [_] On-call schedules
-- [_] Teams
+- [_] Teams management
+- [_] Your feature request?
+- [_] Desktop client builds and publish
 
 ## Development
 
