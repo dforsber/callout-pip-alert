@@ -5,7 +5,7 @@ import { useAudio } from "../hooks/useAudio";
 import { useDemoMode } from "../hooks/useDemoMode";
 import { usePushNotifications } from "../hooks/usePushNotifications";
 import { startDemoSequence, stopDemoSequence, resetDemoCounter } from "../lib/demo";
-import { cloudDemoApi, devicesApi, gameApi } from "../lib/api";
+import { cloudDemoApi, devicesApi, gameApi, usersApi } from "../lib/api";
 import {
   CloudBackend,
   getBackends,
@@ -43,13 +43,13 @@ function ConfirmDialog({ isOpen, title, message, onConfirm, onCancel }: ConfirmD
         <div className="flex gap-3">
           <button
             onClick={onCancel}
-            className="flex-1 py-2 px-4 border-2 border-amber-500/50 rounded text-amber-500 font-mono font-bold"
+            className="flex-1 py-2 px-4 border-2 border-amber-500/50 rounded text-amber-500 font-mono font-bold active:scale-95 active:bg-amber-500/20 transition-all"
           >
             CANCEL
           </button>
           <button
             onClick={onConfirm}
-            className="flex-1 py-2 px-4 bg-red-500 text-zinc-900 rounded font-mono font-bold"
+            className="flex-1 py-2 px-4 bg-red-500 text-zinc-900 rounded font-mono font-bold active:scale-95 active:bg-red-400 transition-all"
           >
             DELETE
           </button>
@@ -120,6 +120,11 @@ export default function SettingsPage() {
   const [gameResult, setGameResult] = useState<{ success: boolean; message: string } | null>(null);
   const [pushTestLoading, setPushTestLoading] = useState(false);
   const [pushTestResult, setPushTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  // Account deletion state
+  const [deleteAccountConfirm, setDeleteAccountConfirm] = useState(false);
+  const [deleteAccountLoading, setDeleteAccountLoading] = useState(false);
+  const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
 
   // Demo mode
   const {
@@ -469,6 +474,28 @@ export default function SettingsPage() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    playUISound("click");
+    setDeleteAccountLoading(true);
+    setDeleteAccountError(null);
+
+    try {
+      await usersApi.deleteAccount();
+      playUISound("success");
+      // Clear biometric credentials
+      await clearStoredCredentials();
+      // Sign out and navigate to login
+      await signOut();
+      navigate("login");
+    } catch (error) {
+      setDeleteAccountError(error instanceof Error ? error.message : "Failed to delete account");
+      playUISound("error");
+    } finally {
+      setDeleteAccountLoading(false);
+      setDeleteAccountConfirm(false);
+    }
+  };
+
   return (
     <div className="h-full bg-zinc-900 p-4 overflow-auto">
       <h1 className="text-xl font-bold text-amber-500 font-mono tracking-wider mb-4">CONFIG</h1>
@@ -483,7 +510,7 @@ export default function SettingsPage() {
                 playUISound("click");
                 showForm ? resetForm() : handleAddClick();
               }}
-              className="text-sm text-amber-500 font-mono font-bold"
+              className="text-sm text-amber-500 font-mono font-bold px-2 py-1 active:scale-95 active:bg-amber-500/20 rounded transition-all"
             >
               {showForm ? "[CANCEL]" : "[+ ADD]"}
             </button>
@@ -549,7 +576,7 @@ export default function SettingsPage() {
                   playUISound("click");
                   handleSubmit();
                 }}
-                className="w-full py-2 bg-amber-500 text-zinc-900 rounded font-mono font-bold"
+                className="w-full py-2 bg-amber-500 text-zinc-900 rounded font-mono font-bold active:scale-95 active:bg-amber-400 transition-all"
               >
                 {editingId ? "SAVE CHANGES" : "ADD BACKEND"}
               </button>
@@ -589,7 +616,7 @@ export default function SettingsPage() {
                           playUISound("click");
                           handleSelectBackend(backend.id);
                         }}
-                        className="text-xs text-green-500 font-mono font-bold px-2 py-1"
+                        className="text-xs text-green-500 font-mono font-bold px-2 py-1 active:scale-95 active:bg-green-500/20 rounded transition-all"
                       >
                         [SELECT]
                       </button>
@@ -599,7 +626,7 @@ export default function SettingsPage() {
                         playUISound("click");
                         handleEditClick(backend);
                       }}
-                      className="text-xs text-amber-500 font-mono font-bold px-2 py-1"
+                      className="text-xs text-amber-500 font-mono font-bold px-2 py-1 active:scale-95 active:bg-amber-500/20 rounded transition-all"
                     >
                       [EDIT]
                     </button>
@@ -608,7 +635,7 @@ export default function SettingsPage() {
                         playUISound("click");
                         handleDeleteClick(backend);
                       }}
-                      className="text-xs text-red-500 font-mono font-bold px-2 py-1"
+                      className="text-xs text-red-500 font-mono font-bold px-2 py-1 active:scale-95 active:bg-red-500/20 rounded transition-all"
                     >
                       [DEL]
                     </button>
@@ -1017,21 +1044,21 @@ export default function SettingsPage() {
                 {!demoRunning ? (
                   <button
                     onClick={handleStartDemo}
-                    className="flex-1 py-2 bg-amber-500/20 text-amber-500 rounded border border-amber-500/50 font-mono text-sm font-bold"
+                    className="flex-1 py-2 bg-amber-500/20 text-amber-500 rounded border border-amber-500/50 font-mono text-sm font-bold active:scale-95 active:bg-amber-500/40 transition-all"
                   >
                     START
                   </button>
                 ) : (
                   <button
                     onClick={handleStopDemo}
-                    className="flex-1 py-2 bg-red-500/20 text-red-500 rounded border border-red-500/50 font-mono text-sm font-bold"
+                    className="flex-1 py-2 bg-red-500/20 text-red-500 rounded border border-red-500/50 font-mono text-sm font-bold active:scale-95 active:bg-red-500/40 transition-all"
                   >
                     STOP
                   </button>
                 )}
                 <button
                   onClick={handleResetDemo}
-                  className="flex-1 py-2 bg-zinc-900 text-amber-500/70 rounded border border-amber-500/30 font-mono text-sm font-bold"
+                  className="flex-1 py-2 bg-zinc-900 text-amber-500/70 rounded border border-amber-500/30 font-mono text-sm font-bold active:scale-95 active:bg-amber-500/20 transition-all"
                 >
                   RESET
                 </button>
@@ -1265,14 +1292,33 @@ export default function SettingsPage() {
       {isAuthenticated && (
         <div className="bg-zinc-800 rounded border-2 border-amber-500/30 p-4 mb-4">
           <h2 className="text-sm font-bold text-amber-500/70 font-mono mb-2">{">"} ACCOUNT</h2>
-          <p className="font-bold text-amber-500 font-mono">{user?.getUsername() || "NOT SIGNED IN"}</p>
+          <p className="font-bold text-amber-500 font-mono mb-3">{user?.getUsername() || "NOT SIGNED IN"}</p>
+
+          {/* Delete Account Error */}
+          {deleteAccountError && (
+            <div className="p-2 bg-red-500/10 border border-red-500/30 rounded mb-3">
+              <p className="text-xs text-red-500 font-mono text-center">{deleteAccountError}</p>
+            </div>
+          )}
+
+          {/* Delete Account Button */}
+          <button
+            onClick={() => {
+              playUISound("click");
+              setDeleteAccountConfirm(true);
+            }}
+            disabled={deleteAccountLoading}
+            className="w-full py-2 bg-red-500/10 text-red-500/70 rounded border border-red-500/30 font-mono text-sm font-bold disabled:opacity-50 active:scale-95 active:bg-red-500/20 transition-all"
+          >
+            {deleteAccountLoading ? "DELETING..." : "DELETE ACCOUNT"}
+          </button>
         </div>
       )}
 
       {/* App info */}
       <div className="bg-zinc-800 rounded border-2 border-amber-500/30 p-4 mb-4">
         <h2 className="text-sm font-bold text-amber-500/70 font-mono mb-2">{">"} SYSTEM INFO</h2>
-        <p className="text-amber-500 font-mono">PIP-ALERT v0.1.0</p>
+        <p className="text-amber-500 font-mono">PIP-ALERT v0.1.2</p>
       </div>
 
       {/* Sign out or Go to Login */}
@@ -1281,8 +1327,9 @@ export default function SettingsPage() {
           onClick={() => {
             playUISound("click");
             signOut();
+            navigate("login");
           }}
-          className="w-full py-3 bg-red-500/20 text-red-500 rounded border-2 border-red-500/50 font-mono font-bold flex items-center justify-center gap-2"
+          className="w-full py-3 bg-red-500/20 text-red-500 rounded border-2 border-red-500/50 font-mono font-bold flex items-center justify-center gap-2 active:scale-95 active:bg-red-500/40 transition-all"
         >
           <span className="text-2xl leading-none -mt-1">☢</span>
           SIGN OUT
@@ -1293,7 +1340,7 @@ export default function SettingsPage() {
             playUISound("click");
             navigate("login");
           }}
-          className="w-full py-3 bg-amber-500 text-zinc-900 rounded font-mono font-bold"
+          className="w-full py-3 bg-amber-500 text-zinc-900 rounded font-mono font-bold active:scale-95 active:bg-amber-400 transition-all"
         >
           GO TO LOGIN
         </button>
@@ -1307,6 +1354,34 @@ export default function SettingsPage() {
         onConfirm={handleDeleteConfirm}
         onCancel={() => setDeleteConfirm({ isOpen: false, backendId: null, backendName: "" })}
       />
+
+      {/* Delete Account Confirmation Dialog */}
+      {deleteAccountConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
+          <div className="bg-zinc-800 rounded-lg border-2 border-red-500/50 max-w-sm w-full p-4">
+            <h3 className="text-lg font-bold text-red-500 font-mono mb-2">[WARNING] Delete Account</h3>
+            <p className="text-amber-500/80 text-sm font-mono mb-4">
+              This will permanently delete your account and all associated data. This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteAccountConfirm(false)}
+                disabled={deleteAccountLoading}
+                className="flex-1 py-2 px-4 border-2 border-amber-500/50 rounded text-amber-500 font-mono font-bold active:scale-95 active:bg-amber-500/20 transition-all disabled:opacity-50"
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleteAccountLoading}
+                className="flex-1 py-2 px-4 bg-red-500 text-zinc-900 rounded font-mono font-bold active:scale-95 active:bg-red-400 transition-all disabled:opacity-50"
+              >
+                {deleteAccountLoading ? "..." : "DELETE"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

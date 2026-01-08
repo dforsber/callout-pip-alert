@@ -34,6 +34,23 @@ npm-debug.log*
 *.ipa
 *.apk
 *.aab
+*.xcarchive
 AuthKey_*
 distribution*
 TestFlight_with_PipAlert.mobileprovision
+*.mobileprovision
+
+# Xcode
+xcuserdata/
+*.xcworkspace/xcuserdata/
+DerivedData/
+
+# Test coverage
+coverage/
+*.lcov
+
+# Turbo
+.turbo/
+
+# Claude plans
+.claude/

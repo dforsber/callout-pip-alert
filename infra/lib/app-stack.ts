@@ -183,6 +183,29 @@ export class AppStack extends cdk.Stack {
     teamsTable.grantReadWriteData(teamsHandler);
     usersTable.grantReadWriteData(teamsHandler);
 
+    // Users handler (account management)
+    const usersHandler = new nodejs.NodejsFunction(this, "UsersHandler", {
+      functionName: "cw-alarms-users",
+      runtime: lambda.Runtime.NODEJS_22_X,
+      handler: "handler",
+      entry: path.join(functionsPath, "handlers/users.ts"),
+      environment: {
+        ...commonEnv,
+        USER_POOL_ID: userPool.userPoolId,
+      },
+      timeout: cdk.Duration.seconds(30),
+      bundling: bundlingOptions,
+    });
+    usersTable.grantReadWriteData(usersHandler);
+    devicesTable.grantReadWriteData(usersHandler);
+    // Grant Cognito admin permissions for user deletion
+    usersHandler.addToRolePolicy(
+      new cdk.aws_iam.PolicyStatement({
+        actions: ["cognito-idp:AdminDeleteUser"],
+        resources: [userPool.userPoolArn],
+      })
+    );
+
     // Schedules handler
     const schedulesHandler = new nodejs.NodejsFunction(this, "SchedulesHandler", {
       functionName: "cw-alarms-schedules",
@@ -375,6 +398,14 @@ export class AppStack extends cdk.Stack {
       path: "/teams/{id}/members/{uid}",
       methods: [apigateway.HttpMethod.DELETE],
       integration: new apigatewayIntegrations.HttpLambdaIntegration("TeamsMembersRemove", teamsHandler),
+      authorizer,
+    });
+
+    // Users routes (account management)
+    httpApi.addRoutes({
+      path: "/users/me",
+      methods: [apigateway.HttpMethod.DELETE],
+      integration: new apigatewayIntegrations.HttpLambdaIntegration("UsersDeleteMe", usersHandler),
       authorizer,
     });
 

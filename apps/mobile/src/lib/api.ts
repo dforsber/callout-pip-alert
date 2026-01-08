@@ -111,6 +111,11 @@ export const teamsApi = {
     fetchWithAuth(`/teams/${teamId}/members/${userId}`, { method: "DELETE" }),
 };
 
+// Users (account management)
+export const usersApi = {
+  deleteAccount: () => fetchWithAuth("/users/me", { method: "DELETE" }),
+};
+
 // Schedules
 export const schedulesApi = {
   current: () => fetchWithAuth("/schedules/current"),

@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../lib/auth";
 import { useNavigation } from "../lib/navigation";
+import { getBackends, getActiveBackendId, setActiveBackendId, CloudBackend } from "../lib/backends";
 
 export default function LoginPage() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -10,10 +11,32 @@ export default function LoginPage() {
   const [name, setName] = useState("");
   const [confirmCode, setConfirmCode] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // Backend selection state
+  const [backends, setBackends] = useState<CloudBackend[]>([]);
+  const [activeBackendId, setActiveBackendIdState] = useState<string | null>(null);
+  const [showBackendSelector, setShowBackendSelector] = useState(false);
 
   const { signIn, signUp, confirmSignUp, signInWithBiometric, isConfigured, canUseBiometric, biometricType } = useAuth();
   const { navigate } = useNavigation();
+
+  // Load backends on mount
+  useEffect(() => {
+    const loadedBackends = getBackends();
+    setBackends(loadedBackends);
+    setActiveBackendIdState(getActiveBackendId());
+  }, []);
+
+  const activeBackend = backends.find((b) => b.id === activeBackendId);
+  const hasMultipleBackends = backends.length > 1;
+
+  function handleBackendChange(backendId: string) {
+    setActiveBackendId(backendId);
+    setShowBackendSelector(false);
+    window.location.reload();
+  }
 
   // Note: Auto-biometric login disabled - user must tap the biometric button
   // useEffect(() => {
@@ -41,6 +64,7 @@ export default function LoginPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setSuccess("");
     setIsLoading(true);
 
     try {
@@ -48,7 +72,7 @@ export default function LoginPage() {
         await confirmSignUp(email, confirmCode);
         setIsConfirming(false);
         setIsSignUp(false);
-        setError("ACCOUNT CONFIRMED. PROCEED WITH LOGIN.");
+        setSuccess("ACCOUNT CONFIRMED. PROCEED WITH LOGIN.");
       } else if (isSignUp) {
         await signUp(email, password, name);
         setIsConfirming(true);
@@ -71,7 +95,7 @@ export default function LoginPage() {
           <div className="w-3 h-3 rounded-full bg-red-500/80" />
           <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
           <div className="w-3 h-3 rounded-full bg-green-500/80" />
-          <span className="ml-2 text-amber-500/70 text-xs font-mono">PIP-ALERT v0.1.0</span>
+          <span className="ml-2 text-amber-500/70 text-xs font-mono">PIP-ALERT v0.1.2</span>
         </div>
 
         {/* Main Terminal */}
@@ -81,6 +105,55 @@ export default function LoginPage() {
             <p className="text-amber-500/60 font-mono text-sm mt-1">{">"} INCIDENT MANAGEMENT SYSTEM</p>
           </div>
 
+          {/* Backend Selector - only show when multiple backends exist */}
+          {hasMultipleBackends && (
+            <div className="mb-4">
+              <label className="block text-amber-500/70 font-mono text-xs mb-1">{">"} BACKEND</label>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowBackendSelector(!showBackendSelector)}
+                  className="w-full px-4 py-3 rounded bg-zinc-800 border-2 border-amber-500/30 text-amber-500 font-mono text-left flex items-center justify-between focus:outline-none focus:border-amber-500 active:scale-[0.98] transition-all"
+                >
+                  <span className="truncate">{activeBackend?.name || "SELECT BACKEND"}</span>
+                  <svg
+                    className={`w-4 h-4 transition-transform ${showBackendSelector ? "rotate-180" : ""}`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {showBackendSelector && (
+                  <div className="absolute z-10 w-full mt-1 bg-zinc-800 border-2 border-amber-500/50 rounded shadow-lg max-h-48 overflow-auto">
+                    {backends.map((backend) => (
+                      <button
+                        key={backend.id}
+                        type="button"
+                        onClick={() => handleBackendChange(backend.id)}
+                        className={`w-full px-4 py-2 text-left font-mono text-sm hover:bg-amber-500/20 active:bg-amber-500/30 transition-colors ${
+                          backend.id === activeBackendId
+                            ? "bg-amber-500/10 text-amber-500"
+                            : "text-amber-500/70"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="truncate">{backend.name}</span>
+                          {backend.id === activeBackendId && (
+                            <span className="text-green-500 text-xs">✓</span>
+                          )}
+                        </div>
+                        <p className="text-xs text-amber-500/40 truncate">{backend.region}</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {!isConfigured && (
             <div className="mb-6 p-4 border border-amber-500/50 rounded bg-amber-500/10">
               <p className="text-amber-500 text-sm font-mono mb-3">
@@ -88,7 +161,7 @@ export default function LoginPage() {
               </p>
               <button
                 onClick={() => navigate("settings")}
-                className="block w-full py-2 bg-amber-500 text-zinc-900 rounded font-mono font-bold text-center hover:bg-amber-400"
+                className="block w-full py-2 bg-amber-500 text-zinc-900 rounded font-mono font-bold text-center hover:bg-amber-400 active:scale-95 active:bg-amber-400 transition-all"
               >
                 CONFIGURE BACKEND
               </button>
@@ -100,7 +173,7 @@ export default function LoginPage() {
             <button
               onClick={handleBiometricLogin}
               disabled={isLoading}
-              className="w-full py-3 mb-4 bg-green-500/20 border-2 border-green-500 text-green-500 rounded font-mono font-bold flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-green-500/30"
+              className="w-full py-3 mb-4 bg-green-500/20 border-2 border-green-500 text-green-500 rounded font-mono font-bold flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-green-500/30 active:scale-95 active:bg-green-500/40 transition-all"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -182,11 +255,16 @@ export default function LoginPage() {
                 <p className="text-red-500 text-sm font-mono text-center">[ERROR] {error}</p>
               </div>
             )}
+            {success && (
+              <div className="p-2 border border-green-500/50 rounded bg-green-500/10">
+                <p className="text-green-500 text-sm font-mono text-center">[OK] {success}</p>
+              </div>
+            )}
 
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-3 bg-amber-500 text-zinc-900 rounded font-mono font-bold hover:bg-amber-400 disabled:opacity-50"
+              className="w-full py-3 bg-amber-500 text-zinc-900 rounded font-mono font-bold hover:bg-amber-400 disabled:opacity-50 active:scale-95 active:bg-amber-400 transition-all"
             >
               {isLoading
                 ? "PROCESSING..."
@@ -203,10 +281,11 @@ export default function LoginPage() {
               onClick={() => {
                 setIsSignUp(!isSignUp);
                 setError("");
+                setSuccess("");
               }}
-              className="w-full mt-4 text-amber-500/70 text-sm font-mono hover:text-amber-500"
+              className="w-full mt-4 text-amber-500/70 text-sm font-mono hover:text-amber-500 active:scale-95 active:text-amber-400 transition-all"
             >
-              {isSignUp ? "{"<"} BACK TO LOGIN" : "{">"} CREATE NEW ACCOUNT"}
+              {isSignUp ? "< BACK TO LOGIN" : "> CREATE NEW ACCOUNT"}
             </button>
           )}
         </div>
